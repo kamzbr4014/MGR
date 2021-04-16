@@ -1,0 +1,10 @@
+Code rules to unify project style:
+----------------------------------
+design:
+signal, variable, ports - camelCase
+processes, procedures, ect. - UperCamelCase
+constants, - UPPERCASE
+----------------------------------
+filenames:
+file_name.xxx
+
