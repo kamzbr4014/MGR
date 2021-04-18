@@ -1,1 +1,3 @@
 vivado_project/*
+#ignore matlab tmp output
+matlab/*.asv
