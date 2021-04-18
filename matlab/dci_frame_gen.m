@@ -54,10 +54,10 @@ disp("File saved")
 % imshow(imgN);
 
 function str = MakeFrame(frameData, hSync, vSync, validRGBValues)
-    tmpData = validRGBValues;
-    siz = size(tmpData);
-    if siz ~= 3
-        tmpData = [0, 0, 0];
-    end
-    str = sprintf('%s %d %d %d %d %d', dec2bin(frameData, 8), hSync, vSync, tmpData);
+%     tmpData = validRGBValues;
+%     siz = size(tmpData);
+%     if siz ~= 3
+%         tmpData = [0, 0, 0];
+%     end
+    str = sprintf('%s %d %d', dec2hex(frameData, 2), hSync, vSync);
 end
