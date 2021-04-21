@@ -19,26 +19,34 @@ junctionPos = 1;
 posA = junctionPos + 1:junctionPos + 1 : length(frameData);
 posB = ones(1, length(frameData));
 posB(posA) = 0;
-frameData(:, posA) = frameHigh;
-frameData(:, logical(posB)) = frameLow;
+frameData(:, posA) = frameLow;
+frameData(:, logical(posB)) = frameHigh;
 
 fName = 'gen/test_pattern_1_dat.txt';
 fileID = fopen(fName, 'w');
 
 [row, col] = size(frameData);
 formatLineLen = col + 1;
+dataCounter = false;
 for m = 1 : row
    for n = 1 : formatLineLen 
        if n == 1 && m == 1
-           dataToSend = MakeFrame(0,1,1,0);
+           dataToSend = MakeFrame(0,1,1,0,0);
+           dataCounter = false;
        elseif n == 1
-           dataToSend = MakeFrame(0,1,0,0);
+           dataToSend = MakeFrame(0,1,0,0,0);
        else
-           dataToSend = MakeFrame(frameData(m, n - 1), 0, 0, 0);
+           dataToSend = MakeFrame(frameData(m, n - 1), 0, 0, dataCounter,... 
+            [rPlane565(m, round((n - 1) / 2)),
+             gPlane565(m, round((n - 1) / 2)),
+             bPlane565(m, round((n - 1) / 2))]);
+           dataCounter = not(dataCounter);
        end
        fprintf(fileID, '%s\n', dataToSend); 
     end
 end
+dataToSend = MakeFrame(0,1,1,0,0);
+fprintf(fileID, '%s\n', dataToSend);
 
 fclose(fileID);
 disp("File saved")
@@ -53,11 +61,22 @@ disp("File saved")
 % subplot(212)
 % imshow(imgN);
 
-function str = MakeFrame(frameData, hSync, vSync, validRGBValues)
-%     tmpData = validRGBValues;
-%     siz = size(tmpData);
-%     if siz ~= 3
-%         tmpData = [0, 0, 0];
-%     end
-    str = sprintf('%s %d %d', dec2hex(frameData, 2), hSync, vSync);
+function str = MakeFrame(frameData, hSync, vSync, validDataSign, dataVector)
+    tmpData = dataVector;
+    len = length(dataVector);
+    if len < 3 
+        tmpData = [0, 0, 0];
+    end
+    valSign = 0;
+    if validDataSign 
+        valSign = 1;
+    end
+    str = sprintf('%s %d %d %d %s %s %s',...
+            dec2hex(frameData, 2),... 
+            hSync,...
+            vSync,...
+            valSign,...
+            dec2hex(tmpData(1), 2),...
+            dec2hex(tmpData(2), 2),...
+            dec2hex(tmpData(3), 2));
 end
