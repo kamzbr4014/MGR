@@ -32,10 +32,15 @@ use IEEE.NUMERIC_STD.ALL;
 --use UNISIM.VComponents.all;
 
 entity dci_module is
-    Port ( pixCLK   :   in STD_LOGIC;
-           hSync    :   in STD_LOGIC;
-           vSync    :   in STD_LOGIC;
-           dciData  :   in STD_LOGIC_VECTOR (7 downto 0));
+    Port ( pixCLK   :   in  STD_LOGIC;
+           mainCLK  :   in  STD_LOGIC;
+           hSync    :   in  STD_LOGIC;
+           vSync    :   in  STD_LOGIC;
+           dciData  :   in  STD_LOGIC_VECTOR (7 downto 0);
+           rOut     :   out STD_LOGIC_VECTOR (7 downto 0);
+           gOut     :   out STD_LOGIC_VECTOR (7 downto 0);
+           bOut     :   out STD_LOGIC_VECTOR (7 downto 0));
+           
 end dci_module;
 
 architecture Behavioral of dci_module is
@@ -48,22 +53,39 @@ architecture Behavioral of dci_module is
     signal gReg         : std_logic_vector(7 downto 0) := (others => '0');
     signal bReg         : std_logic_vector(7 downto 0) := (others => '0');
     
+    signal edgeDetectorA : std_logic := '0';
+    signal edgeDetectorB : std_logic := '0';
+    
 begin
-    VSyncTracker : process(vSync) -- TODO add CLK synchro
+    VSyncTracker : process(mainCLK) -- TODO add CLK synchro
+        variable edgePulseRE : std_logic := '0';
+        variable edgePulseFE : std_logic := '0';
     begin
-        if falling_edge(vSync)
-            vSyncActive <= '1';
-        else
-            vSyncActive <= '0';         
+        if rising_edge(mainCLK) then
+            edgeDetectorA <= vSync;
+            edgePulseFE :=  edgeDetectorA and not vSync;
+            edgePulseRE :=  not edgeDetectorA and vSync;
+            if edgePulseFE = '1'  then
+                vSyncActive <= '1';
+            elsif edgePulseRE = '1' then
+                vSyncActive <= '0';
+            end if;        
         end if;
     end process;
     
-    HSyncTracker : process(hSync) -- TODO add CLK synchro
+    hSyncTracker : process(mainCLK) -- TODO add CLK synchro
+        variable edgePulseRE : std_logic := '0';
+        variable edgePulseFE : std_logic := '0';
     begin
-        if falling_edge(hSync) then
-            hSyncActive <= '1';
-        else
-            hSyncActive <= '0';         
+        if rising_edge(mainCLK) then
+            edgeDetectorB <= hSync;
+            edgePulseFE :=  edgeDetectorB and not hSync;
+            edgePulseRE :=  not edgeDetectorB and hSync;
+            if edgePulseFE = '1'  then
+                hSyncActive <= '1';
+            elsif edgePulseRE = '1' then
+                hSyncActive <= '0';
+            end if;        
         end if;
     end process;
 
@@ -86,11 +108,14 @@ begin
         end if;
     end process;
     
+    rOut <= rReg;
+    gOut <= gReg;
+    bOut <= bReg;
     DataSegregation : process(dataReady)
     begin
         if dataReady = '1' then
             rReg <= frameSR(15 downto 11) & "000";
-            gReg <= frameSR(10 downto 5)  & "000";
+            gReg <= frameSR(10 downto 5)  & "00";
             bReg <= frameSR(4  downto 0)  & "000";
         end if;
     end process;

@@ -39,20 +39,43 @@ end dci_module_tb;
 
 architecture Behavioral of dci_module_tb is
     component dci_module
-         Port (pixCLK   :   in STD_LOGIC;
-               hSync    :   in STD_LOGIC;
-               vSync    :   in STD_LOGIC;
-               dciData  :   in STD_LOGIC_VECTOR (7 downto 0));
+        Port ( pixCLK   :   in  STD_LOGIC;
+               mainCLK  :   in  STD_LOGIC;
+               hSync    :   in  STD_LOGIC;
+               vSync    :   in  STD_LOGIC;
+               dciData  :   in  STD_LOGIC_VECTOR (7 downto 0);
+               rOut     :   out STD_LOGIC_VECTOR (7 downto 0);
+               gOut     :   out STD_LOGIC_VECTOR (7 downto 0);
+               bOut     :   out STD_LOGIC_VECTOR (7 downto 0));
+               
     end component;
     
-    signal pixCLK   : STD_LOGIC := '0';            
+    type colorArray is array (2 downto 0) of STD_LOGIC_VECTOR (7 downto 0);
+    
+    signal pixCLK   : STD_LOGIC := '0';  
+    signal mainCLK  : STD_LOGIC := '0';          
     signal hSync    : STD_LOGIC := '0';
     signal vSync    : STD_LOGIC := '0';
     signal dciData  : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
-    
-    constant pixCLKPeriod : time := 10 ns;
-    constant filePath     : string := "../../../../../matlab/gen/test_pattern_1_dat.txt";
+    signal rOut     : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+    signal gOut     : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+    signal bOut     : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+ 
+    signal cArray   : colorArray;
+    signal vFlag    : STD_LOGIC := '0';
+ 
+    constant mainCLKPeriod  : time := 1 ns;
+    constant pixCLKPeriod   : time := 10 ns;
+    constant filePath       : string := "../../../../../matlab/gen/test_pattern_1_dat.txt";
 begin
+    MainCLKSim : process
+    begin
+        mainCLK <= '0';
+        wait for mainCLKPeriod / 2;
+        mainCLK <= '1';
+        wait for mainCLKPeriod / 2;
+    end process;
+
     PixCLKSim : process
     begin
         pixCLK <= '0';
@@ -65,8 +88,10 @@ begin
         file textFile           : text;
         variable textLine       : line;
         variable readDciData    : std_logic_vector(7 downto 0) := (others => '0');
+        variable readValRGB     : colorArray;
         variable readHSync      : std_logic := '0';
         variable readVSync      : std_logic := '0';
+        variable readVFlag      : std_logic := '0';
         variable readSucess     : boolean;
         variable spaceChar      : character;
     begin
@@ -86,10 +111,24 @@ begin
             read(textLine, readVSync, readSucess);
             assert readSucess
                 severity failure;
+            read(textLine, readVFlag, readSucess);
+            assert readSucess
+                severity failure;
+            hread(textLine, readValRGB(2), readSucess);
+            assert readSucess
+                severity failure;
+            hread(textLine, readValRGB(1), readSucess);
+            assert readSucess
+                severity failure;
+            hread(textLine, readValRGB(0), readSucess);
+            assert readSucess
+                severity failure;        
             
             dciData <= readDciData;
             hSync <= readHSync;
             vSync <= readVSync;
+            cArray <= readValRGB;
+            vFlag <= readVFlag;
             wait until rising_edge(pixCLK);
         end loop;
         
@@ -100,8 +139,12 @@ begin
     end process;     
        
     uut: dci_module port map(pixCLK => pixCLK,
+        mainCLK => mainCLK,
         hSync => hSync,
         vSync => vSync,
-        dciData => dciData);
+        dciData => dciData,
+        rOut => rOut,
+        bOut => bOut,
+        gOut => gOut);
 
 end Behavioral;
