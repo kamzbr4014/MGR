@@ -50,6 +50,7 @@ architecture Behavioral of dci_module_tb is
                
     end component;
     
+    constant ASSERTION_TEST : boolean := false;
     type colorArray is array (2 downto 0) of STD_LOGIC_VECTOR (7 downto 0);
     
     signal pixCLK   : STD_LOGIC := '0';  
@@ -127,7 +128,7 @@ begin
             dciData <= readDciData;
             hSync <= readHSync;
             vSync <= readVSync;
-            cArray <= readValRGB;
+            cArray <= readValRGB;   
             vFlag <= readVFlag;
             wait until rising_edge(pixCLK);
         end loop;
@@ -137,6 +138,13 @@ begin
         wait;
     
     end process;     
+    
+    AS : if ASSERTION_TEST generate
+        ValidColorSplit : process
+        begin
+            -- add valid color split test
+        end process;
+    end generate;
        
     uut: dci_module port map(pixCLK => pixCLK,
         mainCLK => mainCLK,
