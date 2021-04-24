@@ -20,6 +20,7 @@ proc checkRequiredFiles { origin_dir} {
   set files [list \
    "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
+   "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
    "${origin_dir}/tb/dci_module_tb.vhd" \
   ]
   foreach ifile $files {
@@ -128,7 +129,15 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "165" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.ies_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.vcs_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.xcelium_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "1" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "170" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -153,6 +162,8 @@ set file "$origin_dir/hdl/preprocessing_module.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
+set_property -name "used_in" -value "synthesis" -objects $file_obj
+set_property -name "used_in_simulation" -value "0" -objects $file_obj
 
 
 # Set 'sources_1' fileset file properties for local files
@@ -184,11 +195,17 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
+ [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
 # Set 'sim_1' fileset file properties for remote files
+set file "$origin_dir/tb/dci_preprocessing_bd_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 set file "$origin_dir/tb/dci_module_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
@@ -201,7 +218,7 @@ set_property -name "file_type" -value "VHDL" -objects $file_obj
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "dci_module_tb" -objects $obj
+set_property -name "top" -value "dci_preprocessing_bd_tb" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
@@ -211,6 +228,188 @@ set obj [get_filesets utils_1]
 
 # Set 'utils_1' fileset properties
 set obj [get_filesets utils_1]
+
+
+# Adding sources referenced in BDs, if not already added
+if { [get_files dci_module.vhd] == "" } {
+  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/dci_module.vhd
+}
+if { [get_files preprocessing_module.vhd] == "" } {
+  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/preprocessing_module.vhd
+}
+
+
+# Proc to create BD dci_preprocessing
+proc cr_bd_dci_preprocessing { parentCell } {
+# The design that will be created by this Tcl proc contains the following 
+# module references:
+# dci_module, preprocessing_module
+
+
+
+  # CHANGE DESIGN NAME HERE
+  set design_name dci_preprocessing
+
+  common::send_gid_msg -ssname BD::TCL -id 2010 -severity "INFO" "Currently there is no design <$design_name> in project, so creating one..."
+
+  create_bd_design $design_name
+
+  set bCheckIPsPassed 1
+  ##################################################################
+  # CHECK Modules
+  ##################################################################
+  set bCheckModules 1
+  if { $bCheckModules == 1 } {
+     set list_check_mods "\ 
+  dci_module\
+  preprocessing_module\
+  "
+
+   set list_mods_missing ""
+   common::send_gid_msg -ssname BD::TCL -id 2020 -severity "INFO" "Checking if the following modules exist in the project's sources: $list_check_mods ."
+
+   foreach mod_vlnv $list_check_mods {
+      if { [can_resolve_reference $mod_vlnv] == 0 } {
+         lappend list_mods_missing $mod_vlnv
+      }
+   }
+
+   if { $list_mods_missing ne "" } {
+      catch {common::send_gid_msg -ssname BD::TCL -id 2021 -severity "ERROR" "The following module(s) are not found in the project: $list_mods_missing" }
+      common::send_gid_msg -ssname BD::TCL -id 2022 -severity "INFO" "Please add source files for the missing module(s) above."
+      set bCheckIPsPassed 0
+   }
+}
+
+  if { $bCheckIPsPassed != 1 } {
+    common::send_gid_msg -ssname BD::TCL -id 2023 -severity "WARNING" "Will not continue with creation of design due to the error(s) above."
+    return 3
+  }
+
+  variable script_folder
+
+  if { $parentCell eq "" } {
+     set parentCell [get_bd_cells /]
+  }
+
+  # Get object for parentCell
+  set parentObj [get_bd_cells $parentCell]
+  if { $parentObj == "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2090 -severity "ERROR" "Unable to find parent cell <$parentCell>!"}
+     return
+  }
+
+  # Make sure parentObj is hier blk
+  set parentType [get_property TYPE $parentObj]
+  if { $parentType ne "hier" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2091 -severity "ERROR" "Parent <$parentObj> has TYPE = <$parentType>. Expected to be <hier>."}
+     return
+  }
+
+  # Save current instance; Restore later
+  set oldCurInst [current_bd_instance .]
+
+  # Set parent object as current
+  current_bd_instance $parentObj
+
+
+  # Create interface ports
+
+  # Create ports
+  set dataOut [ create_bd_port -dir O -from 7 -to 0 -type data dataOut ]
+  set dataReadyOut [ create_bd_port -dir O dataReadyOut ]
+  set dciData [ create_bd_port -dir I -from 7 -to 0 -type data dciData ]
+  set hSync [ create_bd_port -dir I hSync ]
+  set mainCLK [ create_bd_port -dir I -type clk -freq_hz 50000000 mainCLK ]
+  set pixCLK [ create_bd_port -dir I -type clk -freq_hz 10000000 pixCLK ]
+  set vSync [ create_bd_port -dir I vSync ]
+
+  # Create instance: dci_module_0, and set properties
+  set block_name dci_module
+  set block_cell_name dci_module_0
+  if { [catch {set dci_module_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $dci_module_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create instance: preprocessing_module_0, and set properties
+  set block_name preprocessing_module
+  set block_cell_name preprocessing_module_0
+  if { [catch {set preprocessing_module_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $preprocessing_module_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create port connections
+  connect_bd_net -net dciData_1 [get_bd_ports dciData] [get_bd_pins dci_module_0/dciData]
+  connect_bd_net -net dci_module_0_bOut [get_bd_pins dci_module_0/bOut] [get_bd_pins preprocessing_module_0/bIn]
+  connect_bd_net -net dci_module_0_dataReady [get_bd_pins dci_module_0/dataReady] [get_bd_pins preprocessing_module_0/dataReadyIn]
+  connect_bd_net -net dci_module_0_gOut [get_bd_pins dci_module_0/gOut] [get_bd_pins preprocessing_module_0/gIn]
+  connect_bd_net -net dci_module_0_rOut [get_bd_pins dci_module_0/rOut] [get_bd_pins preprocessing_module_0/rIn]
+  connect_bd_net -net hSync_1 [get_bd_ports hSync] [get_bd_pins dci_module_0/hSync]
+  connect_bd_net -net mainCLK_1 [get_bd_ports mainCLK] [get_bd_pins dci_module_0/mainCLK]
+  connect_bd_net -net pixCLK_1 [get_bd_ports pixCLK] [get_bd_pins dci_module_0/pixCLK] [get_bd_pins preprocessing_module_0/CLK]
+  connect_bd_net -net preprocessing_module_0_dataOut [get_bd_ports dataOut] [get_bd_pins preprocessing_module_0/dataOut]
+  connect_bd_net -net preprocessing_module_0_dataReadyOut [get_bd_ports dataReadyOut] [get_bd_pins preprocessing_module_0/dataReadyOut]
+  connect_bd_net -net vSync_1 [get_bd_ports vSync] [get_bd_pins dci_module_0/vSync]
+
+  # Create address segments
+
+  # Perform GUI Layout
+  regenerate_bd_layout -layout_string {
+   "ActiveEmotionalView":"Default View",
+   "Default View_ScaleFactor":"1.25",
+   "Default View_TopLeft":"-817,-266",
+   "ExpandedHierarchyInLayout":"",
+   "commentid":"",
+   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS-threadsafe
+#  -string -flagsOSRD
+preplace port pixCLK -pg 1 -lvl 0 -x -630 -y 0 -defaultsOSRD
+preplace port mainCLK -pg 1 -lvl 1 -x -550 -y -160 -defaultsOSRD -top
+preplace port vSync -pg 1 -lvl 0 -x -630 -y 140 -defaultsOSRD
+preplace port hSync -pg 1 -lvl 0 -x -630 -y 80 -defaultsOSRD
+preplace port dataReadyOut -pg 1 -lvl 3 -x 190 -y 40 -defaultsOSRD
+preplace portBus dciData -pg 1 -lvl 0 -x -630 -y 180 -defaultsOSRD
+preplace portBus dataOut -pg 1 -lvl 3 -x 190 -y 160 -defaultsOSRD
+preplace inst dci_module_0 -pg 1 -lvl 1 -x -440 -y 90 -defaultsOSRD -resize 262 268
+preplace inst preprocessing_module_0 -pg 1 -lvl 2 -x -130 -y 90 -defaultsOSRD -resize 190 268
+preplace netloc dci_module_0_rOut 1 1 1 -280 40n
+preplace netloc dci_module_0_gOut 1 1 1 -260 90n
+preplace netloc dci_module_0_bOut 1 1 1 -260 140n
+preplace netloc dci_module_0_dataReady 1 1 1 -270 10n
+preplace netloc preprocessing_module_0_dataReadyOut 1 2 1 -10 30n
+preplace netloc preprocessing_module_0_dataOut 1 2 1 -10 150n
+preplace netloc pixCLK_1 1 0 2 -610J -70 -270
+preplace netloc mainCLK_1 1 0 1 -600 -150n
+preplace netloc hSync_1 1 0 1 -610 80n
+preplace netloc vSync_1 1 0 1 N 140
+preplace netloc dciData_1 1 0 1 N 180
+levelinfo -pg 1 -630 -440 -130 190
+pagesize -pg 1 -db -bbox -sgen -760 -260 330 350
+"
+}
+
+  # Restore current instance
+  current_bd_instance $oldCurInst
+
+  validate_bd_design
+  save_bd_design
+  close_bd_design $design_name 
+}
+# End of cr_bd_dci_preprocessing()
+cr_bd_dci_preprocessing ""
+set_property REGISTERED_WITH_MANAGER "1" [get_files dci_preprocessing.bd ] 
+set_property SYNTH_CHECKPOINT_MODE "Hierarchical" [get_files dci_preprocessing.bd ] 
+
+
+# Create wrapper file for dci_preprocessing.bd
+make_wrapper -files [get_files dci_preprocessing.bd] -import -top
 
 # Create 'synth_1' run (if not found)
 if {[string equal [get_runs -quiet synth_1] ""]} {
@@ -232,7 +431,6 @@ if { $obj != "" } {
 
 }
 set obj [get_runs synth_1]
-set_property -name "needs_refresh" -value "1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 
 # set the current synth run
