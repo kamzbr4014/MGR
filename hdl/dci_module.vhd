@@ -46,7 +46,6 @@ end dci_module;
 architecture Behavioral of dci_module is
     signal vSyncActive  : std_logic := '0';
     signal hSyncActive  : std_logic := '0';
-    signal frameSR      : std_logic_vector(15 downto 0) := (others => '0');
     signal dataReady    : std_logic := '0';
     
     signal rReg         : std_logic_vector(7 downto 0) := (others => '0');
@@ -91,17 +90,21 @@ begin
 
     DataExtraction : process(pixCLK, vSyncActive, hSyncActive)
         variable regCount : std_logic := '0';
+        variable frameSR  : std_logic_vector(15 downto 0) := (others => '0');
     begin
         if rising_edge(pixCLK) then
             if vSyncActive = '1' then
                 if hSyncActive = '1' then
-                    frameSR <= frameSR(7 downto 0) & dciData;
+                    frameSR := frameSR(7 downto 0) & dciData;
                     if regCount = '0' then
                         regCount := '1';
                         dataReady  <= '0';
                     else
                         regCount := '0';
                         dataReady  <= '1';
+                        rReg <= frameSR(15 downto 11) & "000";
+                        gReg <= frameSR(10 downto 5)  & "00";
+                        bReg <= frameSR(4  downto 0)  & "000";
                     end if;
                 end if;
             end if;
@@ -111,13 +114,5 @@ begin
     rOut <= rReg;
     gOut <= gReg;
     bOut <= bReg;
-    DataSegregation : process(dataReady)
-    begin
-        if dataReady = '1' then
-            rReg <= frameSR(15 downto 11) & "000";
-            gReg <= frameSR(10 downto 5)  & "00";
-            bReg <= frameSR(4  downto 0)  & "000";
-        end if;
-    end process;
-    
+
 end Behavioral;
