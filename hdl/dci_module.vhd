@@ -36,17 +36,18 @@ entity dci_module is
            mainCLK  :   in  STD_LOGIC;
            hSync    :   in  STD_LOGIC;
            vSync    :   in  STD_LOGIC;
+           dataReady:   out STD_LOGIC;
            dciData  :   in  STD_LOGIC_VECTOR (7 downto 0);
            rOut     :   out STD_LOGIC_VECTOR (7 downto 0);
            gOut     :   out STD_LOGIC_VECTOR (7 downto 0);
            bOut     :   out STD_LOGIC_VECTOR (7 downto 0));
-           
+    
 end dci_module;
 
 architecture Behavioral of dci_module is
     signal vSyncActive  : std_logic := '0';
     signal hSyncActive  : std_logic := '0';
-    signal dataReady    : std_logic := '0';
+    signal dataReadyFlag: std_logic := '0';
     
     signal rReg         : std_logic_vector(7 downto 0) := (others => '0');
     signal gReg         : std_logic_vector(7 downto 0) := (others => '0');
@@ -95,22 +96,25 @@ begin
         if rising_edge(pixCLK) then
             if vSyncActive = '1' then
                 if hSyncActive = '1' then
-                    frameSR := frameSR(7 downto 0) & dciData;
+                    frameSR := frameSR(7 downto 0) & dciData; -- TODO: take a better look at simulation if this not a poblem
                     if regCount = '0' then
                         regCount := '1';
-                        dataReady  <= '0';
+                        dataReadyFlag  <= '0';
                     else
                         regCount := '0';
-                        dataReady  <= '1';
+                        dataReadyFlag  <= '1';
                         rReg <= frameSR(15 downto 11) & "000";
                         gReg <= frameSR(10 downto 5)  & "00";
                         bReg <= frameSR(4  downto 0)  & "000";
                     end if;
+                else
+                    dataReadyFlag  <= '0';
                 end if;
             end if;
         end if;
     end process;
     
+    dataReady <= dataReadyFlag;
     rOut <= rReg;
     gOut <= gReg;
     bOut <= bReg;

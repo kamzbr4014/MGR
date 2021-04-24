@@ -43,6 +43,7 @@ architecture Behavioral of dci_module_tb is
                mainCLK  :   in  STD_LOGIC;
                hSync    :   in  STD_LOGIC;
                vSync    :   in  STD_LOGIC;
+               dataReady:   out STD_LOGIC;
                dciData  :   in  STD_LOGIC_VECTOR (7 downto 0);
                rOut     :   out STD_LOGIC_VECTOR (7 downto 0);
                gOut     :   out STD_LOGIC_VECTOR (7 downto 0);
@@ -57,6 +58,7 @@ architecture Behavioral of dci_module_tb is
     signal mainCLK  : STD_LOGIC := '0';          
     signal hSync    : STD_LOGIC := '0';
     signal vSync    : STD_LOGIC := '0';
+    signal dataReady: STD_LOGIC := '0';
     signal dciData  : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
     signal rOut     : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
     signal gOut     : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
@@ -151,6 +153,7 @@ begin
         hSync => hSync,
         vSync => vSync,
         dciData => dciData,
+        dataReady => dataReady,
         rOut => rOut,
         bOut => bOut,
         gOut => gOut);
