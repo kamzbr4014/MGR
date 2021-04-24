@@ -19,6 +19,7 @@ proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
    "${origin_dir}/hdl/dci_module.vhd" \
+   "${origin_dir}/tb/dci_module_tb.vhd" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -126,6 +127,7 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "165" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -152,6 +154,7 @@ set_property -name "file_type" -value "VHDL" -objects $file_obj
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
 set_property -name "top" -value "dci_module" -objects $obj
+set_property -name "top_auto_set" -value "0" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -173,12 +176,26 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
-# Empty (no sources present)
+set files [list \
+ [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
+]
+add_files -norecurse -fileset $obj $files
+
+# Set 'sim_1' fileset file properties for remote files
+set file "$origin_dir/tb/dci_module_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+
+# Set 'sim_1' fileset file properties for local files
+# None
 
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "dci_module" -objects $obj
+set_property -name "top" -value "dci_module_tb" -objects $obj
+set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Set 'utils_1' fileset object
@@ -208,7 +225,7 @@ if { $obj != "" } {
 
 }
 set obj [get_runs synth_1]
-set_property -name "auto_incremental_checkpoint.directory" -value "D:/XlinxWorkspace/Vivado/MGR/MGR/MGR.srcs/utils_1/imports/synth_1" -objects $obj
+set_property -name "needs_refresh" -value "1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 
 # set the current synth run
@@ -422,7 +439,6 @@ set_property -name "options.warn_on_violation" -value "1" -objects $obj
 
 }
 set obj [get_runs impl_1]
-set_property -name "auto_incremental_checkpoint.directory" -value "D:/XlinxWorkspace/Vivado/MGR/MGR/MGR.srcs/utils_1/imports/impl_1" -objects $obj
 set_property -name "strategy" -value "Vivado Implementation Defaults" -objects $obj
 set_property -name "steps.write_bitstream.args.readback_file" -value "0" -objects $obj
 set_property -name "steps.write_bitstream.args.verbose" -value "0" -objects $obj
