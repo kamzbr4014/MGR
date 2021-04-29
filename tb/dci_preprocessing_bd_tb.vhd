@@ -25,7 +25,7 @@ use IEEE.std_logic_textio.all, std.textio.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -42,6 +42,7 @@ architecture Behavioral of dci_preprocessing_bd_tb is
           dataReadyOut  : out STD_LOGIC;
           dciData       : in STD_LOGIC_VECTOR (7 downto 0);
           hSync         : in STD_LOGIC;
+          RST           : in STD_LOGIC;
           mainCLK       : in STD_LOGIC;
           pixCLK        : in STD_LOGIC;
           vSync         : in STD_LOGIC);
@@ -50,18 +51,19 @@ architecture Behavioral of dci_preprocessing_bd_tb is
 
     type colorArray is array (2 downto 0) of STD_LOGIC_VECTOR (7 downto 0);
     
-    signal dataOut      : STD_LOGIC_VECTOR (7 downto 0);
-    signal dataReadyOut : STD_LOGIC;
-    signal dciData      : STD_LOGIC_VECTOR (7 downto 0);
-    signal hSync        : STD_LOGIC;
-    signal mainCLK      : STD_LOGIC;
-    signal pixCLK       : STD_LOGIC;
-    signal vSync        : STD_LOGIC;
+    signal dataOut      : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+    signal dataReadyOut : STD_LOGIC := '0';
+    signal dciData      : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+    signal hSync        : STD_LOGIC := '0';
+    signal mainCLK      : STD_LOGIC := '0';
+    signal pixCLK       : STD_LOGIC := '0';
+    signal vSync        : STD_LOGIC := '0';
+    signal RST        : STD_LOGIC := '0';
     signal cArray       : colorArray;
     signal vFlag        : STD_LOGIC := '0';
     
-    constant filePath   : string := "../../../../../matlab/gen/test_pattern_1_dat.txt";
-                
+    constant dataFilePath   : string := "../../../../../matlab/gen/test_pattern_1_dat.txt";
+    constant resFilePath    : string := "../../../../../tb/res/test_pattern_1_res.txt";            
 begin
     DataReader : process 
         file textFile           : text;
@@ -74,7 +76,7 @@ begin
         variable readSucess     : boolean;
         variable spaceChar      : character;
     begin
-        file_open(textFile, filePath, read_mode);
+        file_open(textFile, dataFilePath, read_mode);
         while not endfile(textFile) loop
             readline(textFile, textLine);
             if textLine.all'length = 0 then
@@ -117,6 +119,31 @@ begin
     
     end process;
     
+    WriteResults : process
+        file simRes : text;
+        variable flagCount : integer := 0; 
+        variable tmp : std_logic_vector(7 downto 0) := x"FF";
+        variable oLine  : line;
+    begin
+        file_open(simRes, resFilePath, write_mode);
+        while true loop
+            wait until rising_edge(pixCLK);
+            if flagCount < 10 then
+                flagCount := flagCount + 1;
+                if dataReadyOut = '1' then
+                    hwrite(oLine, dataOut, right, 2);
+                    writeline(simRes, oLine);
+                    flagCount := 0;    
+                end if; 
+             else
+                exit;
+             end if;   
+        end loop;
+        file_close(simRes);
+        report "Write done";
+        wait;
+    end process;
+    
     MainCLKStim : process
     begin
          mainCLK <= '0';
@@ -135,6 +162,7 @@ begin
     
     uut: component dci_preprocessing 
         port map ( dataOut => dataOut,
+              RST => RST,
               dataReadyOut => dataReadyOut,
               dciData => dciData,
               hSync => hSync,
