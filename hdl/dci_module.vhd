@@ -34,6 +34,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity dci_module is
     Port ( pixCLK   :   in  STD_LOGIC;
            mainCLK  :   in  STD_LOGIC;
+           RST      :   in  STD_LOGIC;
            hSync    :   in  STD_LOGIC;
            vSync    :   in  STD_LOGIC;
            dataReady:   out STD_LOGIC;
@@ -62,30 +63,42 @@ begin
         variable edgePulseFE : std_logic := '0';
     begin
         if rising_edge(mainCLK) then
-            edgeDetectorA <= vSync;
-            edgePulseFE :=  edgeDetectorA and not vSync;
-            edgePulseRE :=  not edgeDetectorA and vSync;
-            if edgePulseFE = '1'  then
-                vSyncActive <= '1';
-            elsif edgePulseRE = '1' then
+            if RST = '1' then
                 vSyncActive <= '0';
+                edgePulseFE := '0';
+                edgePulseRE := '0';
+            else
+                edgeDetectorA <= vSync;
+                edgePulseFE :=  edgeDetectorA and not vSync;
+                edgePulseRE :=  not edgeDetectorA and vSync;
+                if edgePulseFE = '1'  then
+                    vSyncActive <= '1';
+                elsif edgePulseRE = '1' then
+                    vSyncActive <= '0';
+                end if;
             end if;        
         end if;
     end process;
     
-    hSyncTracker : process(mainCLK) -- TODO add CLK synchro
+    hSyncTracker : process(mainCLK) -- TODO add CLK synchro, reset trigerred by data extraction process
         variable edgePulseRE : std_logic := '0';
         variable edgePulseFE : std_logic := '0';
     begin
         if rising_edge(mainCLK) then
-            edgeDetectorB <= hSync;
-            edgePulseFE :=  edgeDetectorB and not hSync;
-            edgePulseRE :=  not edgeDetectorB and hSync;
-            if edgePulseFE = '1'  then
-                hSyncActive <= '1';
-            elsif edgePulseRE = '1' then
+             if RST = '1' then
                 hSyncActive <= '0';
-            end if;        
+                edgePulseFE := '0';
+                edgePulseRE := '0';
+             else
+                edgeDetectorB <= hSync;
+                edgePulseFE :=  edgeDetectorB and not hSync;
+                edgePulseRE :=  not edgeDetectorB and hSync;
+                if edgePulseFE = '1'  then
+                    hSyncActive <= '1';
+                elsif edgePulseRE = '1' then
+                    hSyncActive <= '0';
+                end if;   
+             end if;     
         end if;
     end process;
 
@@ -94,18 +107,26 @@ begin
         variable frameSR  : std_logic_vector(15 downto 0) := (others => '0');
     begin
         if rising_edge(pixCLK) then
-            if vSyncActive = '1' then
-                if hSyncActive = '1' then
-                    frameSR := frameSR(7 downto 0) & dciData; -- TODO: take a better look at simulation if this not a poblem
-                    if regCount = '0' then
-                        regCount := '1';
-                        dataReadyFlag  <= '0';
+            if RST = '1' then 
+                regCount := '0';
+                frameSR := (others => '0');
+                dataReadyFlag  <= '0';
+            else
+                if vSyncActive = '1' then
+                    if hSyncActive = '1' then
+                        frameSR := frameSR(7 downto 0) & dciData; -- TODO: take a better look at simulation if this not a poblem
+                        if regCount = '0' then
+                            regCount := '1';
+                            dataReadyFlag  <= '0';
+                        else
+                            regCount := '0';
+                            dataReadyFlag  <= '1';
+                            rReg <= frameSR(15 downto 11) & "000";
+                            gReg <= frameSR(10 downto 5)  & "00";
+                            bReg <= frameSR(4  downto 0)  & "000";
+                        end if;
                     else
-                        regCount := '0';
-                        dataReadyFlag  <= '1';
-                        rReg <= frameSR(15 downto 11) & "000";
-                        gReg <= frameSR(10 downto 5)  & "00";
-                        bReg <= frameSR(4  downto 0)  & "000";
+                        dataReadyFlag  <= '0';
                     end if;
                 else
                     dataReadyFlag  <= '0';
