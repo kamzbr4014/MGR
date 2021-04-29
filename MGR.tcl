@@ -20,8 +20,9 @@ proc checkRequiredFiles { origin_dir} {
   set files [list \
    "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
-   "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
    "${origin_dir}/tb/dci_module_tb.vhd" \
+   "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
+   "${origin_dir}/hdl/preprocessing_module_tb.vhd" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -129,15 +130,15 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.activehdl_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.ies_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.modelsim_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.questa_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.riviera_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.vcs_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.xcelium_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.xsim_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "170" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "4" -objects $obj
+set_property -name "webtalk.ies_export_sim" -value "4" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "4" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "4" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "4" -objects $obj
+set_property -name "webtalk.vcs_export_sim" -value "4" -objects $obj
+set_property -name "webtalk.xcelium_export_sim" -value "3" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "4" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "268" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -162,8 +163,6 @@ set file "$origin_dir/hdl/preprocessing_module.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
-set_property -name "used_in" -value "synthesis" -objects $file_obj
-set_property -name "used_in_simulation" -value "0" -objects $file_obj
 
 
 # Set 'sources_1' fileset file properties for local files
@@ -172,7 +171,10 @@ set_property -name "used_in_simulation" -value "0" -objects $file_obj
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
 set_property -name "top" -value "dci_module" -objects $obj
+set_property -name "top_arch" -value "Behavioral" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
+set_property -name "top_file" -value "hdl/dci_module.vhd" -objects $obj
+set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -195,18 +197,24 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
- [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
+ [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
+ [file normalize "${origin_dir}/hdl/preprocessing_module_tb.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
 # Set 'sim_1' fileset file properties for remote files
+set file "$origin_dir/tb/dci_module_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 set file "$origin_dir/tb/dci_preprocessing_bd_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/tb/dci_module_tb.vhd"
+set file "$origin_dir/hdl/preprocessing_module_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -218,7 +226,7 @@ set_property -name "file_type" -value "VHDL" -objects $file_obj
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "dci_preprocessing_bd_tb" -objects $obj
+set_property -name "top" -value "dci_module_tb" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
@@ -316,6 +324,7 @@ proc cr_bd_dci_preprocessing { parentCell } {
   # Create interface ports
 
   # Create ports
+  set RST [ create_bd_port -dir I -type rst RST ]
   set dataOut [ create_bd_port -dir O -from 7 -to 0 -type data dataOut ]
   set dataReadyOut [ create_bd_port -dir O dataReadyOut ]
   set dciData [ create_bd_port -dir I -from 7 -to 0 -type data dciData ]
@@ -347,6 +356,7 @@ proc cr_bd_dci_preprocessing { parentCell } {
    }
   
   # Create port connections
+  connect_bd_net -net RST_1 [get_bd_ports RST] [get_bd_pins dci_module_0/RST]
   connect_bd_net -net dciData_1 [get_bd_ports dciData] [get_bd_pins dci_module_0/dciData]
   connect_bd_net -net dci_module_0_bOut [get_bd_pins dci_module_0/bOut] [get_bd_pins preprocessing_module_0/bIn]
   connect_bd_net -net dci_module_0_dataReady [get_bd_pins dci_module_0/dataReady] [get_bd_pins preprocessing_module_0/dataReadyIn]
@@ -365,33 +375,35 @@ proc cr_bd_dci_preprocessing { parentCell } {
   regenerate_bd_layout -layout_string {
    "ActiveEmotionalView":"Default View",
    "Default View_ScaleFactor":"1.25",
-   "Default View_TopLeft":"-817,-266",
+   "Default View_TopLeft":"-836,-266",
    "ExpandedHierarchyInLayout":"",
    "commentid":"",
    "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS-threadsafe
 #  -string -flagsOSRD
-preplace port pixCLK -pg 1 -lvl 0 -x -630 -y 0 -defaultsOSRD
-preplace port mainCLK -pg 1 -lvl 1 -x -550 -y -160 -defaultsOSRD -top
-preplace port vSync -pg 1 -lvl 0 -x -630 -y 140 -defaultsOSRD
-preplace port hSync -pg 1 -lvl 0 -x -630 -y 80 -defaultsOSRD
 preplace port dataReadyOut -pg 1 -lvl 3 -x 190 -y 40 -defaultsOSRD
-preplace portBus dciData -pg 1 -lvl 0 -x -630 -y 180 -defaultsOSRD
+preplace port hSync -pg 1 -lvl 0 -x -640 -y 80 -defaultsOSRD
+preplace port mainCLK -pg 1 -lvl 1 -x -550 -y -160 -defaultsOSRD -top
+preplace port pixCLK -pg 1 -lvl 0 -x -640 -y 0 -defaultsOSRD
+preplace port vSync -pg 1 -lvl 0 -x -640 -y 140 -defaultsOSRD
+preplace port RST -pg 1 -lvl 0 -x -640 -y 40 -defaultsOSRD
 preplace portBus dataOut -pg 1 -lvl 3 -x 190 -y 160 -defaultsOSRD
-preplace inst dci_module_0 -pg 1 -lvl 1 -x -440 -y 90 -defaultsOSRD -resize 262 268
+preplace portBus dciData -pg 1 -lvl 0 -x -640 -y 180 -defaultsOSRD
 preplace inst preprocessing_module_0 -pg 1 -lvl 2 -x -130 -y 90 -defaultsOSRD -resize 190 268
-preplace netloc dci_module_0_rOut 1 1 1 -280 40n
-preplace netloc dci_module_0_gOut 1 1 1 -260 90n
-preplace netloc dci_module_0_bOut 1 1 1 -260 140n
-preplace netloc dci_module_0_dataReady 1 1 1 -270 10n
-preplace netloc preprocessing_module_0_dataReadyOut 1 2 1 -10 30n
-preplace netloc preprocessing_module_0_dataOut 1 2 1 -10 150n
-preplace netloc pixCLK_1 1 0 2 -610J -70 -270
-preplace netloc mainCLK_1 1 0 1 -600 -150n
-preplace netloc hSync_1 1 0 1 -610 80n
-preplace netloc vSync_1 1 0 1 N 140
+preplace inst dci_module_0 -pg 1 -lvl 1 -x -440 -y 90 -defaultsOSRD -resize 262 268
 preplace netloc dciData_1 1 0 1 N 180
-levelinfo -pg 1 -630 -440 -130 190
-pagesize -pg 1 -db -bbox -sgen -760 -260 330 350
+preplace netloc dci_module_0_bOut 1 1 1 -260 140n
+preplace netloc dci_module_0_dataReady 1 1 1 -270 20n
+preplace netloc dci_module_0_gOut 1 1 1 -260 90n
+preplace netloc dci_module_0_rOut 1 1 1 -280 40n
+preplace netloc hSync_1 1 0 1 -610 80n
+preplace netloc mainCLK_1 1 0 1 -610 -150n
+preplace netloc pixCLK_1 1 0 2 -620J -70 -270
+preplace netloc preprocessing_module_0_dataOut 1 2 1 -10 150n
+preplace netloc preprocessing_module_0_dataReadyOut 1 2 1 -10 30n
+preplace netloc vSync_1 1 0 1 N 140
+preplace netloc RST_1 1 0 1 -620 40n
+levelinfo -pg 1 -640 -440 -130 190
+pagesize -pg 1 -db -bbox -sgen -770 -260 330 350
 "
 }
 
