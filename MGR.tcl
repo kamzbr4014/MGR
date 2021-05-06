@@ -18,15 +18,15 @@
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
+   "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
    "${origin_dir}/hdl/filter_module.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
+   "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
    "${origin_dir}/tb/dci_module_tb.vhd" \
-   "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
    "${origin_dir}/tb/preprocessing_module_tb.vhd" \
-   "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -141,7 +141,7 @@ set_property -name "webtalk.questa_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.riviera_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.vcs_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.xsim_export_sim" -value "4" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "320" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "352" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -151,14 +151,19 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 set files [list \
+ [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
  [file normalize "${origin_dir}/hdl/dci_module.vhd"] \
  [file normalize "${origin_dir}/hdl/preprocessing_module.vhd"] \
  [file normalize "${origin_dir}/hdl/filter_module.vhd"] \
- [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
 # Set 'sources_1' fileset file properties for remote files
+set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 set file "$origin_dir/hdl/dci_module.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
@@ -174,22 +179,14 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
 
 # Set 'sources_1' fileset file properties for local files
 # None
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
-set_property -name "top" -value "dci_module" -objects $obj
-set_property -name "top_arch" -value "Behavioral" -objects $obj
+set_property -name "top" -value "BRAM_ctrl_logic" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
-set_property -name "top_file" -value "hdl/dci_module.vhd" -objects $obj
-set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -212,21 +209,26 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
- [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
+ [file normalize "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd"] \
+ [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
  [file normalize "${origin_dir}/tb/preprocessing_module_tb.vhd"] \
- [file normalize "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
 # Set 'sim_1' fileset file properties for remote files
-set file "$origin_dir/tb/dci_module_tb.vhd"
+set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
+set file "$origin_dir/tb/BRAM_ctrl_logic_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/tb/dci_module_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -241,11 +243,6 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/tb/BRAM_ctrl_logic_tb.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
 
 # Set 'sim_1' fileset file properties for local files
 # None
@@ -253,7 +250,8 @@ set_property -name "file_type" -value "VHDL" -objects $file_obj
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "dci_module_tb" -objects $obj
+set_property -name "top" -value "BRAM_ctrl_logic_tb" -objects $obj
+set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Set 'utils_1' fileset object
@@ -434,6 +432,7 @@ if { $obj != "" } {
 
 }
 set obj [get_runs synth_1]
+set_property -name "needs_refresh" -value "1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 
 # set the current synth run

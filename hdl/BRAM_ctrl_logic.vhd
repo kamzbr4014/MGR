@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -51,11 +51,58 @@ end BRAM_ctrl_logic;
 
 architecture Behavioral of BRAM_ctrl_logic is
     type clkCtrlState_t is (sWait, sFetch, sIdle);
+--    type BRAMCtrlState_t is (s
+    subtype rowCnt_t is unsigned(15 downto 0);
+    subtype colCnt_t is unsigned(15 downto 0);
+    signal rowCnt : rowCnt_t := (others => '0');
+    signal colCnt : colCnt_t := (others => '0');
     signal clkCtrlState  : clkCtrlState_t := sIdle; 
     signal nClkCtrlState : clkCtrlState_t := sWait;
     signal dataRdy, nDataRdy      : std_logic := '0';
+    signal rowFull : std_logic := '0';
+    signal frameEnd : std_logic := '0';
 begin
-    clkCtrlStateNUpdate : process(CLK, FRST)
+    CntUpdate : process(CLK, dataRdy)           -- check if there is no latches
+        variable lastRowCnt : rowCnt_t := (others => '0');
+        variable lastColCnt : rowCnt_t := (others => '0');
+    begin
+        if rising_edge(CLK) then
+            if FRST = '1' then
+                rowCnt <= (others => '0');
+                colCnt <= (others => '0');
+                rowFull <= '0';
+                lastRowCnt := (others => '0');
+                
+            else
+                if dataRdy = '1' then
+                    lastRowCnt := rowCnt + 1;
+                    if lastRowCnt < imgWidth then 
+                        rowCnt <= lastRowCnt;
+                        rowFull <= '0'; 
+                    else
+                        lastRowCnt := (others => '0');
+                        rowCnt <= lastRowCnt;
+                        lastColCnt := colCnt + 1;
+                        if lastColCnt < imgHeight then
+                           colCnt <=  lastColCnt;
+                        else
+                           lastColCnt := (others => '0');
+                           colCnt <=  lastColCnt;
+                           frameEnd <= '1';
+                        end if;
+                        rowFull <= '1';
+                    end if;
+                else
+                    rowCnt <= lastRowCnt;
+                    lastRowCnt := rowCnt; 
+                    frameEnd <= '0';
+                    rowFull <= '0';  
+                end if;       
+            end if;
+        end if;
+    end process;
+
+    ClkCtrlStateNUpdate : process(CLK, FRST)
     begin
         if rising_edge(CLK) then
             if FRST = '1' then
@@ -66,7 +113,7 @@ begin
         end if;
     end process;
     
-    clkCtrlStateLogic : process(clkCtrlState, FRST, EN)
+    ClkCtrlStateLogic : process(clkCtrlState, FRST, EN)
     begin
         if FRST = '1' then
             nClkCtrlState <= sIdle;
@@ -92,7 +139,7 @@ begin
              end if;
         end process; 
         
-        clkCtrlStateNData : process(CLK) 
+        ClkCtrlStateNData : process(CLK) 
         begin
             if rising_edge(CLK) then
                 if FRST = '1' then
@@ -103,7 +150,7 @@ begin
             end if;
         end process;        
 
-        clkCtrlStateData : process (clkCtrlState)
+        ClkCtrlStateData : process (clkCtrlState)
         begin
             if FRST = '1' then
                 nDataRdy <= '0';
