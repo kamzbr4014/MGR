@@ -52,7 +52,7 @@ architecture Behavioral of dci_module_tb is
                
     end component;
     
-    constant ASSERTION_TEST : boolean := true;
+    constant ASSERTION_TEST : boolean := false;
     type colorArray is array (2 downto 0) of STD_LOGIC_VECTOR (7 downto 0);
     
     signal pixCLK   : STD_LOGIC := '0';  
@@ -69,9 +69,10 @@ architecture Behavioral of dci_module_tb is
     signal cArray   : colorArray;
     signal vFlag    : STD_LOGIC := '0';
  
-    constant mainCLKPeriod  : time := 1 ns;
-    constant pixCLKPeriod   : time := 10 ns;
-    constant filePath       : string := "../../../../../matlab/gen/test_pattern_1_dat.txt";
+    constant mainCLKPeriod    : time := 1 ns;
+    constant pixCLKPeriod     : time := 10 ns;
+    constant filePathTs       : string := "../../../../../../matlab/gen/test_pattern_1_dat.txt";
+    constant filePath         : string := "../../../../../matlab/gen/test_pattern_1_dat.txt";
 begin
     MainCLKSim : process
     begin

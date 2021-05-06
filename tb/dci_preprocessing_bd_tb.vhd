@@ -62,8 +62,9 @@ architecture Behavioral of dci_preprocessing_bd_tb is
     signal cArray       : colorArray;
     signal vFlag        : STD_LOGIC := '0';
     
-    constant dataFilePath   : string := "../../../../../matlab/gen/test_pattern_1_dat.txt";
-    constant resFilePath    : string := "../../../../../tb/res/test_pattern_1_res.txt";            
+    constant dataFilePathTs  : string  := "../../../../../../matlab/gen/test_pattern_1_dat.txt";
+    constant dataFilePath    : string  := "../../../../../matlab/gen/test_pattern_1_dat.txt";
+    constant resFilePath     : string  := "../../../../../tb/res/test_pattern_1_res.txt";            
 begin
     DataReader : process 
         file textFile           : text;
