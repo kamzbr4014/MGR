@@ -38,10 +38,11 @@ end BRAM_ctrl_logic_tb;
 architecture Behavioral of BRAM_ctrl_logic_tb is
     component BRAM_ctrl_logic
         Generic ( isMaster  : boolean := false;
-                  imgWidth  : integer := 640;
-                  imgHeight : integer := 480);
+                  imgWidth  : integer := 5;
+                  imgHeight : integer := 5);
         Port ( CLK          : in STD_LOGIC;
                EN           : in STD_LOGIC;
+               dataRdy      : in STD_LOGIC;
                FRST         : in STD_LOGIC;
                cntIn        : in STD_LOGIC_VECTOR (9 downto 0);
                nCtrlEnIn    : in STD_LOGIC;
@@ -54,7 +55,8 @@ architecture Behavioral of BRAM_ctrl_logic_tb is
                nCtrlEnOut   : out STD_LOGIC);
     end component;
     
-    signal   CLK          :  STD_LOGIC := '0';
+    signal   CLK          : STD_LOGIC := '0';
+    signal   dataRdy      : STD_LOGIC := '0';
     signal   EN           : STD_LOGIC := '0';
     signal   FRST         : STD_LOGIC := '0';
     signal   cntIn        : STD_LOGIC_VECTOR (9 downto 0) := (others => '0');
@@ -77,18 +79,26 @@ begin
         wait for pixCLKPeriod / 2;
     end process;
     
+    EN <= '1', '0' after pixCLKPeriod;
+    
     dataRdyStim : process
     begin
-        wait for pixCLKPeriod;
-        for i in 0 to 10 loop
-            wait until rising_edge(CLK);
-            EN <= not EN;  
+--        wait for pixCLKPeriod;
+        for j in 0 to 5 loop
+            for i in 0 to 9 loop
+                wait until rising_edge(CLK);
+                dataRdy <= not dataRdy;  
+            end loop;
+            dataRdy <= '0';
+            wait for 2*pixCLKPeriod;
         end loop;
+        wait;
     end process;
 
     uut : BRAM_ctrl_logic
         port map (CLK => CLK,
                   EN => EN,
+                  dataRdy => dataRdy,
                   FRST => FRST,
                   cntIn => cntIn,
                   nCtrlEnIn => nCtrlEnIn,

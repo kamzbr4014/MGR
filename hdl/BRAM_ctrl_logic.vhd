@@ -37,6 +37,7 @@ entity BRAM_ctrl_logic is
               imgHeight : integer := 480);
     Port ( CLK          : in STD_LOGIC;
            EN           : in STD_LOGIC;
+           dataRdy      : in STD_LOGIC;
            FRST         : in STD_LOGIC;
            cntIn        : in STD_LOGIC_VECTOR (9 downto 0);
            nCtrlEnIn    : in STD_LOGIC;
@@ -51,28 +52,31 @@ end BRAM_ctrl_logic;
 
 architecture Behavioral of BRAM_ctrl_logic is
     type clkCtrlState_t is (sWait, sFetch, sIdle);
---    type BRAMCtrlState_t is (s
+    type rowBufferPhase_t is (pA, pAB, pABC);
+    
     subtype rowCnt_t is unsigned(15 downto 0);
     subtype colCnt_t is unsigned(15 downto 0);
-    signal rowCnt : rowCnt_t := (others => '0');
-    signal colCnt : colCnt_t := (others => '0');
-    signal clkCtrlState  : clkCtrlState_t := sIdle; 
-    signal nClkCtrlState : clkCtrlState_t := sWait;
-    signal dataRdy, nDataRdy      : std_logic := '0';
-    signal rowFull : std_logic := '0';
-    signal frameEnd : std_logic := '0';
+    signal rowCnt           : rowCnt_t := (others => '0');
+    signal colCnt           : colCnt_t := (others => '0');
+    signal clkCtrlState     : clkCtrlState_t := sIdle; 
+    signal nClkCtrlState    : clkCtrlState_t := sWait;
+    signal rowFull          : std_logic := '0';
+    signal frameEnd         : std_logic := '0';
+    signal intRST           : std_logic := '0';
+    signal enLatch          : std_logic := '0';
+    signal rowBufferPhase , nRowBufferPhase : rowBufferPhase_t := pA;
+
 begin
     CntUpdate : process(CLK, dataRdy)           -- check if there is no latches
         variable lastRowCnt : rowCnt_t := (others => '0');
         variable lastColCnt : rowCnt_t := (others => '0');
     begin
         if rising_edge(CLK) then
-            if FRST = '1' then
+            if FRST = '1' or intRST = '1' then
                 rowCnt <= (others => '0');
                 colCnt <= (others => '0');
                 rowFull <= '0';
-                lastRowCnt := (others => '0');
-                
+                lastRowCnt := (others => '0');     
             else
                 if dataRdy = '1' then
                     lastRowCnt := rowCnt + 1;
@@ -105,7 +109,7 @@ begin
     ClkCtrlStateNUpdate : process(CLK, FRST)
     begin
         if rising_edge(CLK) then
-            if FRST = '1' then
+            if FRST = '1' or intRST = '1' then
                 clkCtrlState <= sIdle;
             else
                 clkCtrlState <= nClkCtrlState;
@@ -113,22 +117,26 @@ begin
         end if;
     end process;
     
-    ClkCtrlStateLogic : process(clkCtrlState, FRST, EN)
+    ClkCtrlStateLogic : process(clkCtrlState, FRST, dataRdy, intRST, EN, enLatch)
     begin
-        if FRST = '1' then
+        if FRST = '1' or intRST = '1' then
             nClkCtrlState <= sIdle;
         else    
             case (clkCtrlState) is
                 when sIdle =>
-                    if EN = '1' then
-                        nClkCtrlState <= sFetch;
+                    if EN = '1' or enLatch = '1' then
+                        if dataRdy = '1' then
+                            nClkCtrlState <= sFetch;
+                        else
+                            nClkCtrlState <= sIdle;
+                        end if;
                     else
-                        nClkCtrlState <= sIdle;
+--                        nClkCtrlState <= sIdle; -- TODO: eliminate latch
                     end if;
                  when sFetch => 
-                    nClkCtrlState <= sWait;
+                        nClkCtrlState <= sWait;
                  when sWait =>
-                    if EN = '1' then
+                    if dataRdy = '1' then
                         nClkCtrlState <= sFetch;
                     else
                         nClkCtrlState <= sIdle;
@@ -142,25 +150,55 @@ begin
         ClkCtrlStateNData : process(CLK) 
         begin
             if rising_edge(CLK) then
-                if FRST = '1' then
-                    dataRdy <= '0';
+                if FRST = '1' or intRST = '1'  then
+                    rowBufferPhase <= pA;
                 else
-                    dataRdy <= nDataRdy;
+                    rowBufferPhase <= nRowBufferPhase;
                 end if;
             end if;
         end process;        
 
-        ClkCtrlStateData : process (clkCtrlState)
+        ClkCtrlStateData : process (clkCtrlState, FRST, intRST, rowBufferPhase, frameEnd, rowFull)
         begin
-            if FRST = '1' then
-                nDataRdy <= '0';
+            if FRST = '1' or intRST = '1'  then
+                intRST <= '0';
+                nRowBufferPhase <= pA;
+                nCtrlEnOut <= '0'; 
+                enLatch <= '0';
+                WEA <= '0';
+                WEB <= '0';      
             else
-                nDataRdy <= dataRdy;
+                nRowBufferPhase <= rowBufferPhase;
+                WEA <= '0';
+                WEB <= '0';
+                nCtrlEnOut <= '0';
+                intRST <= '0';
                 case clkCtrlState is
-                    when sFetch => 
-                        nDataRdy <= '1';
-                    when sWait =>
-                        nDataRdy <= '0';
+                    when sFetch =>
+                        enLatch <= '1';
+                        if frameEnd = '1' then 
+                            intRST <= '1';
+                        end if;
+                        if rowFull = '1' then
+                            case rowBufferPhase is
+                                when pA =>
+                                    nRowBufferPhase <= pAB;
+                                when pAB => 
+                                    nRowBufferPhase <= pABC;
+                                when pABC =>
+                             end case;
+                         end if;                    
+                        case rowBufferPhase is
+                            when pA =>
+                                WEA <= '1';
+                            when pAB =>
+                                WEA <= '1';
+                                WEB <= '1';
+                            when pABC => 
+                                WEA <= '1';
+                                WEB <= '1';
+                                nCtrlEnOut <= '1';
+                         end case;
                     when others =>
                 end case;
             end if;
