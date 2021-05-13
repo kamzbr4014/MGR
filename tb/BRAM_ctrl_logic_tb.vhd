@@ -44,14 +44,10 @@ architecture Behavioral of BRAM_ctrl_logic_tb is
                EN           : in STD_LOGIC;
                dataRdy      : in STD_LOGIC;
                FRST         : in STD_LOGIC;
-               cntIn        : in STD_LOGIC_VECTOR (9 downto 0);
-               nCtrlEnIn    : in STD_LOGIC;
                WEA          : out STD_LOGIC;
                WEB          : out STD_LOGIC;
                RSTA         : out STD_LOGIC;
                RSTB         : out STD_LOGIC;
-               cntOut       : out STD_LOGIC_VECTOR (9 downto 0);
-               FRSTOut      : out STD_LOGIC;
                nCtrlEnOut   : out STD_LOGIC);
     end component;
     
@@ -89,7 +85,7 @@ begin
     dataRdyStim : process
     begin
 --        wait for pixCLKPeriod;
-        for j in 0 to imgHeight loop
+        for j in 0 to imgHeight-1 loop
             for i in 0 to (imgWidth*2) - 1 loop
                 wait until rising_edge(CLK);
                 dataRdy <= not dataRdy;  
@@ -97,7 +93,7 @@ begin
             dataRdy <= '0';
             wait for 2*pixCLKPeriod;
         end loop;
-        wait;
+--        wait;
     end process;
 
     uutGen : for i in 0 to ((H - 1) / 2)-1 generate
@@ -107,14 +103,10 @@ begin
                       EN => '1',
                       dataRdy => dataRdy,
                       FRST => FRST,
-                      cntIn => cntIn,
-                      nCtrlEnIn => nCtrlEnIn,
                       WEA => WEA(i),
                       WEB => WEB(i),
                       RSTA => RSTA(i),
                       RSTB => RSTB(i),
-                      cntOut => cntOut,
-                      FRSTOut => FRSTOut,
                       nCtrlEnOut => nCtrlEnOut(i));
         end generate master;
         slaves : if i > 0 generate
@@ -123,14 +115,10 @@ begin
                       EN => nCtrlEnOut(i - 1),
                       dataRdy => dataRdy,
                       FRST => FRST,
-                      cntIn => cntIn,
-                      nCtrlEnIn => '1',
                       WEA => WEA(i),
                       WEB => WEB(i),
                       RSTA => RSTA(i),
                       RSTB => RSTB(i),
-                      cntOut => cntOut,
-                      FRSTOut => FRSTOut,
                       nCtrlEnOut => nCtrlEnOut(i));            
         end generate slaves;
     end generate uutGen;              

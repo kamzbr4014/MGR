@@ -39,14 +39,10 @@ entity BRAM_ctrl_logic is
            EN           : in STD_LOGIC;
            dataRdy      : in STD_LOGIC;
            FRST         : in STD_LOGIC;
-           cntIn        : in STD_LOGIC_VECTOR (9 downto 0);
-           nCtrlEnIn    : in STD_LOGIC;
            WEA          : out STD_LOGIC;
            WEB          : out STD_LOGIC;
            RSTA         : out STD_LOGIC;
            RSTB         : out STD_LOGIC;
-           cntOut       : out STD_LOGIC_VECTOR (9 downto 0);
-           FRSTOut      : out STD_LOGIC;
            nCtrlEnOut   : out STD_LOGIC);
 end BRAM_ctrl_logic;
 
