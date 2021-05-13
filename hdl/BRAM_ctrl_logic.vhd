@@ -78,7 +78,7 @@ begin
                 rowFull <= '0';
                 lastRowCnt := (others => '0');     
             else
-                if dataRdy = '1' then   -- probably here is a neeed of if for En/enLatch
+                if dataRdy = '1' then   -- probably here is a neeed of if for En/enLatch - work properly, but enabling by en can save some energy
                     lastRowCnt := rowCnt + 1;
                     if lastRowCnt < imgWidth then 
                         rowCnt <= lastRowCnt;
@@ -168,7 +168,9 @@ begin
                 enLatch <= '0';
                 nIntRST <= '0';
                 WEA <= '0';
-                WEB <= '0';      
+                WEB <= '0';    
+                RSTA <= '1';
+                RSTB <= '1';  
             else
                 nRowBufferPhase <= rowBufferPhase;
                 WEA <= '0';
@@ -192,12 +194,18 @@ begin
                         case rowBufferPhase is
                             when pA =>
                                 WEA <= '1';
+                                RSTA <= '1';
+                                RSTB <= '1';
                             when pAB =>
                                 WEA <= '1';
                                 WEB <= '1';
+                                RSTA <= '0';
+                                RSTB <= '1';
                             when pABC => 
                                 WEA <= '1';
-                                WEB <= '1';                            
+                                WEB <= '1';
+                                RSTA <= '0';
+                                RSTB <= '0';                            
                          end case;
                     when sIdle =>
                         if rowBufferPhase = pABC then
@@ -205,6 +213,8 @@ begin
                         else 
                             nCtrlEnOut <= '0';
                         end if; 
+                        RSTA <= '1';
+                        RSTB <= '1';                         
 --                    when sWait =>
 --                        if rowBufferPhase = pABC then
 --                            nCtrlEnOut <= '1';
