@@ -59,10 +59,10 @@ architecture Behavioral of BRAM_ctrl_logic is
     signal rowCnt           : rowCnt_t := (others => '0');
     signal colCnt           : colCnt_t := (others => '0');
     signal clkCtrlState     : clkCtrlState_t := sIdle; 
-    signal nClkCtrlState    : clkCtrlState_t := sWait;
+    signal nClkCtrlState    : clkCtrlState_t := sIdle;
     signal rowFull          : std_logic := '0';
     signal frameEnd         : std_logic := '0';
-    signal intRST           : std_logic := '0';
+    signal intRST, nIntRST  : std_logic := '0';
     signal enLatch          : std_logic := '0';
     signal rowBufferPhase , nRowBufferPhase : rowBufferPhase_t := pA;
 
@@ -78,7 +78,7 @@ begin
                 rowFull <= '0';
                 lastRowCnt := (others => '0');     
             else
-                if dataRdy = '1' then
+                if dataRdy = '1' then   -- probably here is a neeed of if for En/enLatch
                     lastRowCnt := rowCnt + 1;
                     if lastRowCnt < imgWidth then 
                         rowCnt <= lastRowCnt;
@@ -124,7 +124,7 @@ begin
         else    
             case (clkCtrlState) is
                 when sIdle =>
-                    if EN = '1' or enLatch = '1' then
+                    if dataRdy = '1' and (enLatch = '1' or En = '1') then
                         if dataRdy = '1' then
                             nClkCtrlState <= sFetch;
                         else
@@ -152,8 +152,10 @@ begin
             if rising_edge(CLK) then
                 if FRST = '1' or intRST = '1'  then
                     rowBufferPhase <= pA;
+                    intRST <= '0';
                 else
                     rowBufferPhase <= nRowBufferPhase;
+                    intRST <= nIntRST;
                 end if;
             end if;
         end process;        
@@ -161,10 +163,10 @@ begin
         ClkCtrlStateData : process (clkCtrlState, FRST, intRST, rowBufferPhase, frameEnd, rowFull)
         begin
             if FRST = '1' or intRST = '1'  then
-                intRST <= '0';
                 nRowBufferPhase <= pA;
                 nCtrlEnOut <= '0'; 
                 enLatch <= '0';
+                nIntRST <= '0';
                 WEA <= '0';
                 WEB <= '0';      
             else
@@ -172,12 +174,11 @@ begin
                 WEA <= '0';
                 WEB <= '0';
                 nCtrlEnOut <= '0';
-                intRST <= '0';
                 case clkCtrlState is
                     when sFetch =>
                         enLatch <= '1';
                         if frameEnd = '1' then 
-                            intRST <= '1';
+                            nIntRST <= '1';
                         end if;
                         if rowFull = '1' then
                             case rowBufferPhase is
@@ -196,9 +197,20 @@ begin
                                 WEB <= '1';
                             when pABC => 
                                 WEA <= '1';
-                                WEB <= '1';
-                                nCtrlEnOut <= '1';
+                                WEB <= '1';                            
                          end case;
+                    when sIdle =>
+                        if rowBufferPhase = pABC then
+                            nCtrlEnOut <= '1';
+                        else 
+                            nCtrlEnOut <= '0';
+                        end if; 
+--                    when sWait =>
+--                        if rowBufferPhase = pABC then
+--                            nCtrlEnOut <= '1';
+--                        else 
+----                            nCtrlEnOut <= '0';
+--                        end if;
                     when others =>
                 end case;
             end if;

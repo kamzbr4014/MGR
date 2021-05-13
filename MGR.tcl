@@ -24,8 +24,8 @@ proc checkRequiredFiles { origin_dir} {
    "${origin_dir}/hdl/filter_module.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
-   "${origin_dir}/tb/dci_module_tb.vhd" \
    "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
+   "${origin_dir}/tb/dci_module_tb.vhd" \
    "${origin_dir}/tb/preprocessing_module_tb.vhd" \
   ]
   foreach ifile $files {
@@ -141,7 +141,7 @@ set_property -name "webtalk.questa_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.riviera_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.vcs_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.xsim_export_sim" -value "4" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "387" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "438" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -211,8 +211,8 @@ set obj [get_filesets sim_1]
 set files [list \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
  [file normalize "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd"] \
- [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
+ [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/preprocessing_module_tb.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
@@ -228,12 +228,12 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/tb/dci_module_tb.vhd"
+set file "$origin_dir/tb/dci_preprocessing_bd_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/tb/dci_preprocessing_bd_tb.vhd"
+set file "$origin_dir/tb/dci_module_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj

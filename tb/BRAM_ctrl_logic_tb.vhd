@@ -38,8 +38,8 @@ end BRAM_ctrl_logic_tb;
 architecture Behavioral of BRAM_ctrl_logic_tb is
     component BRAM_ctrl_logic
         Generic ( isMaster  : boolean := false;
-                  imgWidth  : integer := 5;
-                  imgHeight : integer := 5);
+                  imgWidth  : integer := 10;
+                  imgHeight : integer := 10);
         Port ( CLK          : in STD_LOGIC;
                EN           : in STD_LOGIC;
                dataRdy      : in STD_LOGIC;
@@ -55,19 +55,24 @@ architecture Behavioral of BRAM_ctrl_logic_tb is
                nCtrlEnOut   : out STD_LOGIC);
     end component;
     
+    constant H : integer := 5;
+    constant imgWidth : integer := 10;
+    constant imgHeight : integer := 10;
+    type stdSignalarr_t     is array ((H - 1 / 2) - 1 downto 0) of std_logic;
+    type stdVectSignalarr_t is array ((H - 1 / 2) - 1 downto 0) of std_logic_vector(7 downto 0);
     signal   CLK          : STD_LOGIC := '0';
     signal   dataRdy      : STD_LOGIC := '0';
-    signal   EN           : STD_LOGIC := '0';
+    signal   EN           : stdSignalarr_t := (others => '0');
     signal   FRST         : STD_LOGIC := '0';
     signal   cntIn        : STD_LOGIC_VECTOR (9 downto 0) := (others => '0');
     signal   nCtrlEnIn    : STD_LOGIC := '0';
-    signal   WEA          : STD_LOGIC := '0';
-    signal   WEB          : STD_LOGIC := '0';
-    signal   RSTA         : STD_LOGIC := '0';
-    signal   RSTB         : STD_LOGIC := '0';
+    signal   WEA          : stdSignalarr_t := (others => '0');
+    signal   WEB          : stdSignalarr_t := (others => '0');
+    signal   RSTA         : stdSignalarr_t := (others => '0');
+    signal   RSTB         : stdSignalarr_t := (others => '0');
     signal   cntOut       : STD_LOGIC_VECTOR (9 downto 0) := (others => '0');
     signal   FRSTOut      : STD_LOGIC := '0';
-    signal   nCtrlEnOut   : STD_LOGIC := '0';
+    signal   nCtrlEnOut   : stdSignalarr_t :=(others => '0');
     constant pixCLKPeriod     : time := 10 ns;
     
 begin
@@ -79,13 +84,13 @@ begin
         wait for pixCLKPeriod / 2;
     end process;
     
-    EN <= '1', '0' after pixCLKPeriod;
+--    EN <= '1';--, '0' after pixCLKPeriod;
     
     dataRdyStim : process
     begin
 --        wait for pixCLKPeriod;
-        for j in 0 to 5 loop
-            for i in 0 to 9 loop
+        for j in 0 to imgHeight loop
+            for i in 0 to (imgWidth*2) - 1 loop
                 wait until rising_edge(CLK);
                 dataRdy <= not dataRdy;  
             end loop;
@@ -95,19 +100,38 @@ begin
         wait;
     end process;
 
-    uut : BRAM_ctrl_logic
-        port map (CLK => CLK,
-                  EN => EN,
-                  dataRdy => dataRdy,
-                  FRST => FRST,
-                  cntIn => cntIn,
-                  nCtrlEnIn => nCtrlEnIn,
-                  WEA => WEA,
-                  WEB => WEB,
-                  RSTA => RSTA,
-                  RSTB => RSTB,
-                  cntOut => cntOut,
-                  FRSTOut => FRSTOut,
-                  nCtrlEnOut => nCtrlEnOut);
-                 
+    uutGen : for i in 0 to ((H - 1) / 2)-1 generate
+        master : if i = 0 generate
+                uut0 : BRAM_ctrl_logic
+                    port map (CLK => CLK,
+                      EN => '1',
+                      dataRdy => dataRdy,
+                      FRST => FRST,
+                      cntIn => cntIn,
+                      nCtrlEnIn => nCtrlEnIn,
+                      WEA => WEA(i),
+                      WEB => WEB(i),
+                      RSTA => RSTA(i),
+                      RSTB => RSTB(i),
+                      cntOut => cntOut,
+                      FRSTOut => FRSTOut,
+                      nCtrlEnOut => nCtrlEnOut(i));
+        end generate master;
+        slaves : if i > 0 generate
+                uutX : BRAM_ctrl_logic
+                    port map (CLK => CLK,
+                      EN => nCtrlEnOut(i - 1),
+                      dataRdy => dataRdy,
+                      FRST => FRST,
+                      cntIn => cntIn,
+                      nCtrlEnIn => '1',
+                      WEA => WEA(i),
+                      WEB => WEB(i),
+                      RSTA => RSTA(i),
+                      RSTB => RSTB(i),
+                      cntOut => cntOut,
+                      FRSTOut => FRSTOut,
+                      nCtrlEnOut => nCtrlEnOut(i));            
+        end generate slaves;
+    end generate uutGen;              
 end Behavioral;
