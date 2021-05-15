@@ -43,13 +43,14 @@ entity BRAM_ctrl_logic is
            WEB          : out STD_LOGIC;
            RSTA         : out STD_LOGIC;
            RSTB         : out STD_LOGIC;
-           nCtrlEnOut   : out STD_LOGIC);
+           nCtrlEnOut   : out STD_LOGIC;
+           ADDRA        : out STD_LOGIC_VECTOR(10 downto 0);
+           ADDRB        : out STD_LOGIC_VECTOR(10 downto 0));
 end BRAM_ctrl_logic;
 
 architecture Behavioral of BRAM_ctrl_logic is
     type clkCtrlState_t is (sWait, sFetch, sIdle);
     type rowBufferPhase_t is (pA, pAB, pABC);
-    
     subtype rowCnt_t is unsigned(15 downto 0);
     subtype colCnt_t is unsigned(15 downto 0);
     signal rowCnt           : rowCnt_t := (others => '0');
@@ -61,7 +62,7 @@ architecture Behavioral of BRAM_ctrl_logic is
     signal intRST, nIntRST  : std_logic := '0';
     signal enLatch          : std_logic := '0';
     signal rowBufferPhase , nRowBufferPhase : rowBufferPhase_t := pA;
-
+    constant addrOffset     : integer   := 1024 - 1;
 begin
     CntUpdate : process(CLK, dataRdy)           -- check if there is no latches
         variable lastRowCnt : rowCnt_t := (others => '0');
@@ -166,11 +167,15 @@ begin
                 WEA <= '0';
                 WEB <= '0';    
                 RSTA <= '1';
-                RSTB <= '1';  
+                RSTB <= '1'; 
+                ADDRA <= (others => '0');
+                ADDRB <= (others => '0'); 
             else
                 nRowBufferPhase <= rowBufferPhase;
                 WEA <= '0';
                 WEB <= '0';
+                ADDRA <= (others => '0'); 
+                ADDRB <= (others => '0'); 
                 nCtrlEnOut <= '0';
                 case clkCtrlState is
                     when sFetch =>
@@ -186,7 +191,9 @@ begin
                                     nRowBufferPhase <= pABC;
                                 when pABC =>
                              end case;
-                         end if;                    
+                         end if;
+                         ADDRA <= std_logic_vector(rowCnt(10 downto 0));
+                         ADDRB <= std_logic_vector(rowCnt(10 downto 0) + addrOffset);                                             
                         case rowBufferPhase is
                             when pA =>
                                 WEA <= '1';

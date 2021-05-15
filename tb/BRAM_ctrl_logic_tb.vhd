@@ -48,14 +48,19 @@ architecture Behavioral of BRAM_ctrl_logic_tb is
                WEB          : out STD_LOGIC;
                RSTA         : out STD_LOGIC;
                RSTB         : out STD_LOGIC;
-               nCtrlEnOut   : out STD_LOGIC);
+               nCtrlEnOut   : out STD_LOGIC;
+               ADDRA        : out STD_LOGIC_VECTOR(10 downto 0);
+               ADDRB        : out STD_LOGIC_VECTOR(10 downto 0));
     end component;
     
-    constant H : integer := 5;
+    constant W : integer := 5;
     constant imgWidth : integer := 10;
     constant imgHeight : integer := 10;
-    type stdSignalarr_t     is array ((H - 1 / 2) - 1 downto 0) of std_logic;
-    type stdVectSignalarr_t is array ((H - 1 / 2) - 1 downto 0) of std_logic_vector(7 downto 0);
+    constant numOfBRAMs     : integer := (W - 1) / 2 - 1;
+    constant numOfBRAMPorts : integer := ((W - 1) * 2) - 1;
+    type addrBus_t is array(numOfBRAMPorts downto 0) of std_logic_vector(10 downto 0);
+    type stdSignalarr_t     is array (numOfBRAMPorts downto 0) of std_logic;
+    type stdVectSignalarr_t is array (numOfBRAMPorts downto 0) of std_logic_vector(7 downto 0);
     signal   CLK          : STD_LOGIC := '0';
     signal   dataRdy      : STD_LOGIC := '0';
     signal   EN           : stdSignalarr_t := (others => '0');
@@ -69,6 +74,8 @@ architecture Behavioral of BRAM_ctrl_logic_tb is
     signal   cntOut       : STD_LOGIC_VECTOR (9 downto 0) := (others => '0');
     signal   FRSTOut      : STD_LOGIC := '0';
     signal   nCtrlEnOut   : stdSignalarr_t :=(others => '0');
+    signal   ADDRA        : addrBus_t := (others => b"00000000000");
+    signal   ADDRB        : addrBus_t := (others => b"00000000000");
     constant pixCLKPeriod     : time := 10 ns;
     
 begin
@@ -96,7 +103,7 @@ begin
 --        wait;
     end process;
 
-    uutGen : for i in 0 to ((H - 1) / 2)-1 generate
+    uutGen : for i in 0 to numOfBRAMs generate
         master : if i = 0 generate
                 uut0 : BRAM_ctrl_logic
                     port map (CLK => CLK,
@@ -107,6 +114,8 @@ begin
                       WEB => WEB(i),
                       RSTA => RSTA(i),
                       RSTB => RSTB(i),
+                      ADDRA => ADDRA(i),
+                      ADDRB => ADDRB(i),
                       nCtrlEnOut => nCtrlEnOut(i));
         end generate master;
         slaves : if i > 0 generate
@@ -119,6 +128,8 @@ begin
                       WEB => WEB(i),
                       RSTA => RSTA(i),
                       RSTB => RSTB(i),
+                      ADDRA => ADDRA(i),
+                      ADDRB => ADDRB(i),
                       nCtrlEnOut => nCtrlEnOut(i));            
         end generate slaves;
     end generate uutGen;              
