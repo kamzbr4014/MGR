@@ -1,14 +1,14 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
+-- Company: Wroclaw University of Science and Technology 
+-- Engineer: Kamil Zbroinski
 -- 
 -- Create Date: 15.05.2021 12:05:50
--- Design Name: 
+-- Design Name: BRAM_TDP_module
 -- Module Name: BRAM_TDP_module - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
+-- Project Name: Master thesis project 
+-- Target Devices: Basys3
+-- Tool Versions: Vivado 2020.2
+-- Description: Modyfied design from xilinx example (ug901)
 -- 
 -- Dependencies: 
 -- 

@@ -1,14 +1,14 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
+-- Company: Wroclaw University of Science and Technology 
+-- Engineer: Kamil Zbroinski
 -- 
 -- Create Date: 15.05.2021 12:46:49
--- Design Name: 
+-- Design Name: ramPKG
 -- Module Name: ramPKG - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
+-- Project Name: Master thesis project 
+-- Target Devices: Basys3
+-- Tool Versions: Vivado 2020.2
+-- Description: Used for direct filter module 
 -- 
 -- Dependencies: 
 -- 
