@@ -37,7 +37,7 @@ Library UNIMACRO;
 use UNIMACRO.vcomponents.all;
 
 entity filter_module is
-  Generic (W            : integer := 5;
+  Generic (W            : integer := 3;
            imgWidth     : integer := 640;
            imgHeight    : integer := 480);
   Port (pixCLK  : in std_logic;
@@ -77,8 +77,11 @@ architecture Behavioral of filter_module is
     type directShifterRow_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     type directShifterArray_t is array (W - 1 downto 0) of directShifterRow_t;
     signal directShifterArray : directShifterArray_t;
+    -- refactor needed --
     type filterInputs_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
-    signal filterInputs : filterInputs_t;  
+    signal filterInputs : filterInputs_t;
+    type filterInputsRST_t is array(W - 1 downto 0) of std_logic;    
+    signal filterInputsRST : filterInputsRST_t; 
 begin
 --------- process added only for generate design ---------
     process(pixCLK)
@@ -96,12 +99,35 @@ begin
             shifterLoopRow : for i in 0 to W - 1 loop
                 shifterLoopCol : for j in 0 to W - 1 loop
                     if j = 0 then
-                        directShifterArray(i)(j) <= filterInputs(i + (j * (W-1)));
+                        if filterInputsRST(i) = '1' then
+                            directShifterArray(i)(j) <= (others => '0');
+                        else
+                            directShifterArray(i)(j) <= filterInputs(i);
+                        end if;
                     else
-                        directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);   
+                        if filterInputsRST(i) = '1' then
+                            directShifterArray(i)(j) <=  (others => '0');
+                        else
+                            directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);
+                        end if;
                     end if;
                 end loop shifterLoopCol;
             end loop shifterLoopRow;
+        end if;
+    end process;
+    
+    FirstRowInputsRST : process(pixCLK, dataRdy, FRST)
+    begin
+        if rising_edge(pixCLK) then
+            if FRST = '1' then
+                filterInputsRST(0) <= '1';
+            else
+                if dataRdy = '1' then
+                   filterInputsRST(0) <= '0'; 
+                else
+                   filterInputsRST(0) <= filterInputsRST(0);     
+                end if;
+            end if;
         end if;
     end process; 
 
@@ -119,8 +145,8 @@ begin
                           DIB => filterInputs(i*2 + 1),       
                           ENA => '1',       
                           ENB => '1',       
-                          RSTA => RSTA(i),     
-                          RSTB => RSTB(i),     
+                          RSTA => filterInputsRST(i*2 + 1),     
+                          RSTB => filterInputsRST(i*2 + 2),     
                           WEA => WEA(i),      
                           WEB => WEB(i));            
         end generate BRAM0;
@@ -137,8 +163,8 @@ begin
                           DIB => filterInputs(i*2 + 1),       
                           ENA => '1',       
                           ENB => '1',       
-                          RSTA => RSTA(i),     
-                          RSTB => RSTB(i),     
+                          RSTA => filterInputsRST(i*2 + 1),     
+                          RSTB => filterInputsRST(i*2 + 2),     
                           WEA => WEA(i),      
                           WEB => WEB(i));    
         end generate BRAMN; 
@@ -147,28 +173,34 @@ begin
     BRAMCtrlGen : for i in 0 to numOfBRAMs generate
             BRAMctrl0 : if i = 0 generate
                 BRAMctrl : BRAM_ctrl_logic
+                        generic map ( imgWidth => imgWidth,
+                          imgHeight => imgHeight)
                         port map (CLK => pixCLK,
                           EN => '1',
                           dataRdy => dataRdy,
-                          FRST => FRST,
+                          FRST => RST,
+                          FRSTO => FRST,
                           WEA => WEA(i),
                           WEB => WEB(i),
-                          RSTA => RSTA(i),
-                          RSTB => RSTB(i),
+                          RSTA => filterInputsRST(i*2 + 1),
+                          RSTB => filterInputsRST(i*2 + 2),
                           ADDRA => ADDRA(i),
                           ADDRB => ADDRB(i),
                           nCtrlEnOut => nCtrlEnOut(i));
             end generate BRAMctrl0;
             BRAMctrlN : if i > 0 generate
                 BRAMctrl : BRAM_ctrl_logic
+                        generic map ( imgWidth => imgWidth,
+                          imgHeight => imgHeight)                
                         port map (CLK => pixCLK,
                           EN => nCtrlEnOut(i - 1),
                           dataRdy => dataRdy,
                           FRST => FRST,
+                          FRSTO => open,
                           WEA => WEA(i),
                           WEB => WEB(i),
-                          RSTA => RSTA(i),
-                          RSTB => RSTB(i),
+                          RSTA => filterInputsRST(i*2 + 1),
+                          RSTB => filterInputsRST(i*2 + 2),
                           ADDRA => ADDRA(i),
                           ADDRB => ADDRB(i),                          
                           nCtrlEnOut => nCtrlEnOut(i));            

@@ -32,24 +32,26 @@ use IEEE.NUMERIC_STD.ALL;
 --use UNISIM.VComponents.all;
 
 entity BRAM_TDP_RF_module is
-  Port ( CLKA : in std_logic;
-    CLKB    : in std_logic;
-    ENA     : in std_logic;
-    ENB     : in std_logic;
-    WEA     : in std_logic;
-    WEB     : in std_logic;
-    RSTA    : in std_logic;
-    RSTB    : in std_logic;
-    ADDRA   : in std_logic_vector(10 downto 0);
-    ADDRB   : in std_logic_vector(10 downto 0);
-    DIA     : in std_logic_vector(7 downto 0);
-    DIB     : in std_logic_vector(7 downto 0);
-    DOA     : out std_logic_vector(7 downto 0);
-    DOB     : out std_logic_vector(7 downto 0) );
+    Generic (BRAMSize        : integer := 2048);                 
+    Port ( CLKA : in std_logic;
+        CLKB    : in std_logic;
+        ENA     : in std_logic;
+        ENB     : in std_logic;
+        WEA     : in std_logic;
+        WEB     : in std_logic;
+        RSTA    : in std_logic;
+        RSTB    : in std_logic;
+        ADDRA   : in std_logic_vector(10 downto 0);
+        ADDRB   : in std_logic_vector(10 downto 0);
+        DIA     : in std_logic_vector(7 downto 0);
+        DIB     : in std_logic_vector(7 downto 0);
+        DOA     : out std_logic_vector(7 downto 0);
+        DOB     : out std_logic_vector(7 downto 0));
 end BRAM_TDP_RF_module;
 
 architecture Behavioral of BRAM_TDP_RF_module is
-    type ram_type is array (1023 downto 0) of std_logic_vector(7 downto 0);
+    
+    type ram_type is array (BRAMSize - 1 downto 0) of std_logic_vector(7 downto 0);
     shared variable RAM : ram_type;
     attribute ramStyle : string;
     attribute ramStyle of RAM : variable is "block";

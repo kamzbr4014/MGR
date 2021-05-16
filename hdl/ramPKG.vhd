@@ -40,6 +40,7 @@ package RamPKG is
                EN           : in STD_LOGIC;
                dataRdy      : in STD_LOGIC;
                FRST         : in STD_LOGIC;
+               FRSTO        : out STD_LOGIC;
                WEA          : out STD_LOGIC;
                WEB          : out STD_LOGIC;
                RSTA         : out STD_LOGIC;
@@ -49,21 +50,22 @@ package RamPKG is
                ADDRB        : out STD_LOGIC_VECTOR(10 downto 0));
     end component;
     component BRAM_TDP_RF_module
-        Port ( CLKA : in std_logic;
-               CLKB    : in std_logic;
-               ENA     : in std_logic;
-               ENB     : in std_logic;
-               WEA     : in std_logic;
-               WEB     : in std_logic;
-               RSTA    : in std_logic;
-               RSTB    : in std_logic;
-               ADDRA   : in std_logic_vector(10 downto 0);
-               ADDRB   : in std_logic_vector(10 downto 0);
-               DIA     : in std_logic_vector(7 downto 0);
-               DIB     : in std_logic_vector(7 downto 0);
-               DOA     : out std_logic_vector(7 downto 0);
-               DOB     : out std_logic_vector(7 downto 0) );
-        end component; 
+        Generic ( BRAMSize  : integer := 2048);      
+        Port ( CLKA         : in std_logic;
+               CLKB         : in std_logic;
+               ENA          : in std_logic;
+               ENB          : in std_logic;
+               WEA          : in std_logic;
+               WEB          : in std_logic;
+               RSTA         : in std_logic;
+               RSTB         : in std_logic;
+               ADDRA        : in std_logic_vector(10 downto 0);
+               ADDRB        : in std_logic_vector(10 downto 0);
+               DIA          : in std_logic_vector(7 downto 0);
+               DIB          : in std_logic_vector(7 downto 0);
+               DOA          : out std_logic_vector(7 downto 0);
+               DOB          : out std_logic_vector(7 downto 0));
+        end component;      
 end ramPKG;
 
 package body ramPKG is
