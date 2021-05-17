@@ -40,6 +40,7 @@ entity BRAM_ctrl_logic is
            dataRdy      : in STD_LOGIC;
            FRST         : in STD_LOGIC;
            FRSTO        : out STD_LOGIC;
+           filterCtrl   : out STD_LOGIC;           
            WEA          : out STD_LOGIC;
            WEB          : out STD_LOGIC;
            RSTA         : out STD_LOGIC;
@@ -155,6 +156,7 @@ begin
         nADDRAS         <= (others => '0'); 
         nADDRBS         <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));        
         nFRSTOS         <= '0';
+        FRSTO           <= '0';
     else
         nIntRST         <= '0';
         nRowCnt         <= rowCnt;
@@ -204,7 +206,10 @@ begin
             WEA                 <= '0';
             WEB                 <= '0';    
             nRSTAS              <= '1';
-            nRSTBS              <= '1'; 
+            nRSTBS              <= '1';
+            RSTA                <= '1';
+            RSTB                <= '1';
+            filterCtrl          <= '0';              
         else
             nRowBufferPhase     <= rowBufferPhase;
             nCtrlEnOut          <= '0';
@@ -214,10 +219,12 @@ begin
             nRSTBS              <= RSTBS;           
             RSTA                <= RSTAS;
             RSTB                <= RSTBS;
+            filterCtrl          <= '0'; 
             case clkCtrlState is
                 when sFetch =>
                     enLatch <= '1';
-                    if nRowFull = '1' then  -- TODO: rename signal (next prefix is confusing)
+                    filterCtrl <= '1'; 
+                    if nRowFull = '1' then  -- TODO: rename signal (next prefix is confusing)                        
                         case rowBufferPhase is
                             when pA =>
                                 nRowBufferPhase <= pAB;
@@ -226,7 +233,7 @@ begin
                             when pABC =>
                          end case;
                      end if;
-                                      
+                 
                     case rowBufferPhase is
                         when pA =>
                             WEA <= '1';
