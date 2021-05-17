@@ -50,28 +50,28 @@ entity BRAM_ctrl_logic is
 end BRAM_ctrl_logic;
 
 architecture Behavioral of BRAM_ctrl_logic is
-    type clkCtrlState_t is (sWait, sFetch, sIdle);
-    type rowBufferPhase_t is (pA, pAB, pABC);
-    subtype rowCnt_t is unsigned(15 downto 0);
-    subtype colCnt_t is unsigned(15 downto 0);
-    signal rowCnt, nRowCnt           : rowCnt_t := (others => '0');
-    signal colCnt, nColCnt           : colCnt_t := (others => '0');
-    signal clkCtrlState     : clkCtrlState_t := sIdle; 
-    signal nClkCtrlState    : clkCtrlState_t := sIdle;
-    signal rowFull          : std_logic := '0';
-    signal frameEnd         : std_logic := '0';
-    signal intRST, nIntRST  : std_logic := '0';
-    signal enLatch          : std_logic := '0';
+    type clkCtrlState_t     is (sWait, sFetch, sIdle);
+    type rowBufferPhase_t   is (pA, pAB, pABC);
+    subtype rowCnt_t        is unsigned(15 downto 0);
+    subtype colCnt_t        is unsigned(15 downto 0);
+    constant addrOffset                     : integer   := 1024 - 1;
+    signal rowCnt, nRowCnt                  : rowCnt_t := (others => '0');
+    signal colCnt, nColCnt                  : colCnt_t := (others => '0');
+    signal clkCtrlState                     : clkCtrlState_t := sIdle; 
+    signal nClkCtrlState                    : clkCtrlState_t := sIdle;
+    signal rowFull, nRowFull                : std_logic := '0';
+    signal frameEnd                         : std_logic := '0'; -- debug only
+    signal intRST, nIntRST                  : std_logic := '0';
+    signal enLatch                          : std_logic := '0';
     signal rowBufferPhase , nRowBufferPhase : rowBufferPhase_t := pA;
-    constant addrOffset     : integer   := 1024 - 1;
-    signal cntRST : std_logic := '0';
-    signal ADDRAS, nADDRAS : STD_LOGIC_VECTOR(10 downto 0) := (others => '0');
-    signal ADDRBS, nADDRBS : STD_LOGIC_VECTOR(10 downto 0) := std_logic_vector(to_unsigned(addrOffset, ADDRAS'length));
-    signal RSTAS, nRSTAS    : std_logic := '1';
-    signal RSTBS, nRSTBS    : std_logic := '1';
-    signal FRSTOS, nFRSTOS    : std_logic := '0';
+    signal cntRST                           : std_logic := '0';
+    signal ADDRAS, nADDRAS                  : STD_LOGIC_VECTOR(10 downto 0) := (others => '0');
+    signal ADDRBS, nADDRBS                  : STD_LOGIC_VECTOR(10 downto 0) := std_logic_vector(to_unsigned(addrOffset, ADDRAS'length));
+    signal RSTAS, nRSTAS                    : std_logic := '1';
+    signal RSTBS, nRSTBS                    : std_logic := '1';
+    signal FRSTOS, nFRSTOS                  : std_logic := '0';
+    
 begin
-
     ClkCtrlStateNUpdate : process(CLK, FRST)
     begin
         if rising_edge(CLK) then
@@ -97,7 +97,7 @@ begin
                             nClkCtrlState <= sIdle;
                         end if;
                     else
---                        nClkCtrlState <= sIdle; -- TODO: eliminate latch
+                        nClkCtrlState <= ClkCtrlState; -- TODO: eliminate latch
                     end if;
                  when sFetch => 
                         nClkCtrlState <= sWait;
@@ -117,25 +117,27 @@ begin
     begin
         if rising_edge(CLK) then
             if FRST = '1' or intRST = '1'  then
-                rowBufferPhase <= pA;
-                intRST <= '0';
-                rowCnt <= (others => '0');
-                colCnt <= (others => '0');
-                ADDRAS <= std_logic_vector(rowCnt(10 downto 0) + 1);       
-                ADDRBS <= std_logic_vector(rowCnt(10 downto 0) + addrOffset + 1);
-                RSTAS <= '1';
-                RSTBS <= '1';
-                FRSTOS <= '0';  
+                intRST          <= '0';
+                rowBufferPhase  <= pA;
+                rowCnt          <= (others => '0');
+                colCnt          <= (others => '0');
+                rowFull         <= '0';
+                ADDRAS          <= std_logic_vector(rowCnt(10 downto 0));       
+                ADDRBS          <= std_logic_vector(rowCnt(10 downto 0) + addrOffset);
+                RSTAS           <= '1';
+                RSTBS           <= '1';
+                FRSTOS          <= '0';  
             else
-                rowBufferPhase <= nRowBufferPhase;
-                intRST <= nIntRST;
-                rowCnt <= nRowCnt;
-                colCnt <= nColCnt;
-                ADDRAS <= nADDRAS;
-                ADDRBS <= nADDRBS;
-                RSTAS <= nRSTAS;
-                RSTBS <= nRSTBS;
-                FRSTOS <= nFRSTOS;                     
+                intRST          <= nIntRST;
+                rowBufferPhase  <= nRowBufferPhase;
+                rowCnt          <= nRowCnt;
+                colCnt          <= nColCnt;
+                rowFull         <= nRowFull;
+                ADDRAS          <= nADDRAS;
+                ADDRBS          <= nADDRBS;
+                RSTAS           <= nRSTAS;
+                RSTBS           <= nRSTBS;
+                FRSTOS          <= nFRSTOS;                     
             end if;
         end if;
     end process;
@@ -144,40 +146,47 @@ begin
         variable tmpRowCnt, tmpColCnt : unsigned(15 downto 0) := (others => '0');
     begin
     if FRST = '1' or intRST = '1' then
-        ADDRA <= (others => '0'); 
-        ADDRB <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));
-        nFRSTOS <= '0';
-        nIntRST <= '0';        
+        nIntRST         <= '0';
+        nRowCnt         <= (others => '0'); 
+        nColCnt         <= (others => '0');
+        nRowFull        <= '0';        
+        ADDRA           <= (others => '0'); 
+        ADDRB           <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));
+        nADDRAS         <= (others => '0'); 
+        nADDRBS         <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));        
+        nFRSTOS         <= '0';
     else
-        rowFull <= '0';
-        frameEnd <= '0';
-        nIntRST <= '0';
-        nRowCnt <= rowCnt;
-        ADDRA <= ADDRAS; 
-        ADDRB <= ADDRBS;
-        nFRSTOS <= '0';
-        FRSTO <= FRSTOS;
+        nIntRST         <= '0';
+        nRowCnt         <= rowCnt;
+        nColCnt         <= ColCnt;
+        nRowFull        <= '0';
+        ADDRA           <= ADDRAS; 
+        ADDRB           <= ADDRBS;
+        nADDRAS         <= ADDRAS; 
+        nADDRBS         <= ADDRBS;
+        nFRSTOS         <= '0';
+        FRSTO           <= FRSTOS;
+        frameEnd        <= '0';
         case clkCtrlState is    
             when sFetch =>
                 tmpRowCnt := rowCnt + 1;
                 if tmpRowCnt < imgWidth then
                     nRowCnt <= tmpRowCnt;
-                    rowFull <= '0';
                     nADDRAS <= std_logic_vector(rowCnt(10 downto 0) + 1);       
                     nADDRBS <= std_logic_vector(rowCnt(10 downto 0) + addrOffset + 1);  
                 else
                     tmpColCnt := colCnt + 1;
                     if tmpColCnt < imgHeight then
                         nColCnt <= tmpColCnt;
-                        frameEnd <= '0';
+                        frameEnd <= '0';    -- dbg only
                     else
                         nColCnt <= (others => '0');
-                        frameEnd <= '1';
+                        frameEnd <= '1';    -- dbg only
                         nIntRST <= '1';
                         nFRSTOS <= '1';           
                     end if; 
                     nRowCnt <= (others => '0');
-                    rowFull <= '1';
+                    nRowFull <= '1';
                     nADDRAS <= (others => '0');
                     nADDRBS <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));
                 end if;
@@ -189,24 +198,26 @@ begin
     ClkCtrlStateData : process (clkCtrlState, FRST, intRST, rowBufferPhase, frameEnd, rowFull, RSTAS, RSTBS)
     begin
         if FRST = '1' or intRST = '1'  then
-            nRowBufferPhase <= pA;
-            nCtrlEnOut <= '0'; 
-            enLatch <= '0';
-            WEA <= '0';
-            WEB <= '0';    
-            nRSTAS <= '1';
-            nRSTBS <= '1'; 
+            nRowBufferPhase     <= pA;
+            nCtrlEnOut          <= '0'; 
+            enLatch             <= '0';
+            WEA                 <= '0';
+            WEB                 <= '0';    
+            nRSTAS              <= '1';
+            nRSTBS              <= '1'; 
         else
-            nRowBufferPhase <= rowBufferPhase;
-            WEA <= '0';
-            WEB <= '0';
-            RSTA <= RSTAS;
-            RSTB <= RSTBS;
-            nCtrlEnOut <= '0';
+            nRowBufferPhase     <= rowBufferPhase;
+            nCtrlEnOut          <= '0';
+            WEA                 <= '0';
+            WEB                 <= '0';
+            nRSTAS              <= RSTAS;
+            nRSTBS              <= RSTBS;           
+            RSTA                <= RSTAS;
+            RSTB                <= RSTBS;
             case clkCtrlState is
                 when sFetch =>
                     enLatch <= '1';
-                    if rowFull = '1' then
+                    if nRowFull = '1' then  -- TODO: rename signal (next prefix is confusing)
                         case rowBufferPhase is
                             when pA =>
                                 nRowBufferPhase <= pAB;
@@ -220,27 +231,19 @@ begin
                         when pA =>
                             WEA <= '1';
                             WEB <= '0';
---                                RSTA <= '1';
---                                RSTB <= '1';
                         when pAB =>
                             WEA <= '1';
                             WEB <= '1';
---                                RSTA <= '0';
---                                RSTB <= '1';
                         when pABC => 
                             WEA <= '1';
-                            WEB <= '1';
---                                RSTA <= '0';
---                                RSTB <= '0';                            
+                            WEB <= '1';                       
                      end case;
                 when sIdle =>
                     if rowBufferPhase = pABC then
                         nCtrlEnOut <= '1';
                     else 
                         nCtrlEnOut <= '0';
-                    end if; 
---                        RSTA <= '1';  -- TODO: add counter to prevent errors while unexpected errr occurs
---                        RSTB <= '1';                         
+                    end if;     -- TODO: add counter to prevent errors while unexpected errr occurs                     
                 when sWait =>
                     case rowBufferPhase is
                         when pA =>

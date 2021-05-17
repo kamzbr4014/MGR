@@ -40,9 +40,9 @@ end filter_module_tb;
 
 architecture Behavioral of filter_module_tb is
     component filter_module 
-      Generic (W            : integer := 3;
+      Generic (W            : integer := 5;
                imgWidth     : integer := 10;
-               imgHeight    : integer := 10);
+               imgHeight    : integer := 5);
       Port (pixCLK  : in std_logic;
             RST     : in std_logic;
             dataRdy : in std_logic;
