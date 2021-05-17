@@ -28,8 +28,8 @@ proc checkRequiredFiles { origin_dir} {
   }
 
   set files [list \
-   "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/hdl/BRAM_TDP_module.vhd" \
+   "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/hdl/ramPKG.vhd" \
    "${origin_dir}/hdl/filter_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
@@ -154,7 +154,7 @@ set_property -name "webtalk.questa_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.riviera_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.vcs_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.xsim_export_sim" -value "4" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "617" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "619" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -164,8 +164,8 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 set files [list \
- [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_TDP_module.vhd"] \
+ [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
  [file normalize "${origin_dir}/hdl/ramPKG.vhd"] \
  [file normalize "${origin_dir}/hdl/filter_module.vhd"] \
  [file normalize "${origin_dir}/hdl/preprocessing_module.vhd"] \
@@ -174,12 +174,12 @@ set files [list \
 add_files -norecurse -fileset $obj $files
 
 # Set 'sources_1' fileset file properties for remote files
-set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
+set file "$origin_dir/hdl/BRAM_TDP_module.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/hdl/BRAM_TDP_module.vhd"
+set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -210,7 +210,7 @@ set_property -name "file_type" -value "VHDL" -objects $file_obj
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
-set_property -name "top" -value "BRAM_ctrl_logic" -objects $obj
+set_property -name "top" -value "filter_module" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)

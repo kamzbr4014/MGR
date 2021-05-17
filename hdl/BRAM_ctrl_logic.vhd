@@ -195,7 +195,7 @@ begin
     end if;
     end process;
     
-    ClkCtrlStateData : process (clkCtrlState, FRST, intRST, rowBufferPhase, frameEnd, rowFull, RSTAS, RSTBS)
+    ClkCtrlStateData : process (clkCtrlState, FRST, intRST, rowBufferPhase, frameEnd, nRowFull, RSTAS, RSTBS)
     begin
         if FRST = '1' or intRST = '1'  then
             nRowBufferPhase     <= pA;
