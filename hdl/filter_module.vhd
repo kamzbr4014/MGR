@@ -21,6 +21,7 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.std_logic_textio.all, std.textio.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -76,23 +77,63 @@ architecture Behavioral of filter_module is
     signal nCtrlEnOut   : stdSignalarr_t :=(others => '0');
     type directShifterRow_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     type directShifterArray_t is array (W - 1 downto 0) of directShifterRow_t;
+    type postMultRow_t is array(W - 1 downto 0) of unsigned(15 downto 0);
+    type postMultArray_t is array (W - 1 downto 0) of postMultRow_t;
+    signal postMultArray : postMultArray_t;
     signal directShifterArray : directShifterArray_t;
     -- refactor needed --
     type filterInputs_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     signal filterInputs : filterInputs_t;
     type filterInputsRST_t is array(W - 1 downto 0) of std_logic;    
-    signal filterInputsRST : filterInputsRST_t; 
+    signal filterInputsRST : filterInputsRST_t;
+    signal filterCtrl : std_logic := '0';
+    type coeffsRow_t is array(W - 1 downto 0) of  std_logic_vector(7 downto 0);
+    type coeffsArray_t is array(W - 1 downto 0) of  coeffsRow_t;
+    constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
+    
+    impure function coeffsInit(filename : string) return coeffsArray_t is
+        file  textFile          : text;
+        variable textLine       : line;
+        variable tmpData        : std_logic_vector(7 downto 0);
+        variable tmpArr         : coeffsArray_t;
+    begin
+        file_open(textFile, filename, read_mode);
+        for i in 0 to W - 1 loop
+            for j in 0 to W - 1 loop
+                readline(textFile, textLine);
+                hread(textLine, tmpData);
+                tmpArr(i)(j) := tmpData;
+            end loop;
+        end loop;
+        return tmpArr;
+    end function;    
+    
+    constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePath); 
 begin
 --------- process added only for generate design ---------
-    process(pixCLK)
-        variable sum : unsigned(7 downto 0);
-    begin
-        for i in 0 to W - 1 loop
-            sum := sum + unsigned(directShifterArray(i)(W - 1));
-        end loop;
-        dataOut <= std_logic_vector(sum);
-    end process;
+--    process(pixCLK)
+--        variable sum : unsigned(7 downto 0);
+--    begin
+--        for i in 0 to W - 1 loop
+--            sum := sum + unsigned(directShifterArray(i)(W - 1));
+--        end loop;
+--        dataOut <= std_logic_vector(sum);
+--    end process;
 ----------------------------------------------------------
+    MultPrcess : process(pixCLK, filterCtrl)
+    begin
+        if rising_edge(pixCLK) then
+            if filterCtrl = '1' then
+                for i in 0 to W - 1 loop
+                    for j in 0 to W - 1 loop
+                        postMultArray(i)(j) <= unsigned(coeffsArray(i)(j)) * unsigned(directShifterArray(i)(j));   
+                    end loop;
+                end loop;    
+            end if;
+        end if;
+    end process;
+
+    filterInputs(0) <= dataIn;
     DirectShifter : process(pixCLK)
     begin
         if rising_edge(pixCLK) then
@@ -180,6 +221,7 @@ begin
                           dataRdy => dataRdy,
                           FRST => RST,
                           FRSTO => FRST,
+                          filterCtrl => filterCtrl,
                           WEA => WEA(i),
                           WEB => WEB(i),
                           RSTA => filterInputsRST(i*2 + 1),
@@ -197,6 +239,7 @@ begin
                           dataRdy => dataRdy,
                           FRST => FRST,
                           FRSTO => open,
+                          filterCtrl => open,
                           WEA => WEA(i),
                           WEB => WEB(i),
                           RSTA => filterInputsRST(i*2 + 1),

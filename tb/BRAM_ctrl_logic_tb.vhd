@@ -34,7 +34,9 @@ use IEEE.NUMERIC_STD.ALL;
 entity BRAM_ctrl_logic_tb is
 --  Port ( );
 end BRAM_ctrl_logic_tb;
-
+---------------------------------------
+-------- need update ------------------
+---------------------------------------
 architecture Behavioral of BRAM_ctrl_logic_tb is
     component BRAM_ctrl_logic
         Generic ( isMaster  : boolean := false;

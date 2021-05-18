@@ -41,6 +41,7 @@ package RamPKG is
                dataRdy      : in STD_LOGIC;
                FRST         : in STD_LOGIC;
                FRSTO        : out STD_LOGIC;
+               filterCtrl   : out STD_LOGIC;           
                WEA          : out STD_LOGIC;
                WEB          : out STD_LOGIC;
                RSTA         : out STD_LOGIC;
