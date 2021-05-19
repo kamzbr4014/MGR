@@ -78,18 +78,22 @@ architecture Behavioral of filter_module is
     type directShifterRow_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     type directShifterArray_t is array (W - 1 downto 0) of directShifterRow_t;
     type postMultRow_t is array(W - 1 downto 0) of unsigned(15 downto 0);
+    type postAdderRow_t is array(W - 1 downto 0) of unsigned(15 downto 0);
     type postMultArray_t is array (W - 1 downto 0) of postMultRow_t;
-    signal postMultArray : postMultArray_t;
-    signal directShifterArray : directShifterArray_t;
+    type postAdderArray_t is array (W - 1 downto 0) of postAdderRow_t;
+    signal postMultArray : postMultArray_t := (others => (others => (others => '0')));
+    signal directShifterArray : directShifterArray_t := (others => (others => (others => '0'))); -- TODO: take look at signal initialization
     -- refactor needed --
     type filterInputs_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     signal filterInputs : filterInputs_t;
     type filterInputsRST_t is array(W - 1 downto 0) of std_logic;    
     signal filterInputsRST : filterInputsRST_t;
     signal filterCtrl : std_logic := '0';
+    signal shifterCtrl : std_logic := '0';
     type coeffsRow_t is array(W - 1 downto 0) of  std_logic_vector(7 downto 0);
     type coeffsArray_t is array(W - 1 downto 0) of  coeffsRow_t;
     constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
+    constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
     
     impure function coeffsInit(filename : string) return coeffsArray_t is
         file  textFile          : text;
@@ -108,7 +112,7 @@ architecture Behavioral of filter_module is
         return tmpArr;
     end function;    
     
-    constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePath); 
+    constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL); 
 begin
 --------- process added only for generate design ---------
 --    process(pixCLK)
@@ -120,6 +124,28 @@ begin
 --        dataOut <= std_logic_vector(sum);
 --    end process;
 ----------------------------------------------------------
+    shifterCtrlProc : process(pixClk, dataRdy)
+    begin
+        if rising_edge(pixCLK) then
+            if dataRdy = '1' then
+                shifterCtrl <= not shifterCtrl;
+            else
+                shifterCtrl <= '0';        
+            end if;
+        end if;
+    end process;
+    
+    filterCtrlProc : process(pixClk, shifterCtrl)
+    begin
+        if rising_edge(pixCLK) then
+            if shifterCtrl = '1' then
+                filterCtrl <= not filterCtrl;
+            else
+                filterCtrl <= '0';        
+            end if;
+        end if;
+    end process;
+    
     MultPrcess : process(pixCLK, filterCtrl)
     begin
         if rising_edge(pixCLK) then
@@ -132,28 +158,59 @@ begin
             end if;
         end if;
     end process;
-
-    filterInputs(0) <= dataIn;
-    DirectShifter : process(pixCLK)
+    
+    AdderProcess : process(pixCLK, filterCtrl)
+        type adderRes_t is array(W - 1 downto 0) of unsigned(15 downto 0);
+        variable adderRes : adderRes_t := (others => (others => '0'));
+        variable adderSignals :  postAdderArray_t := (others => (others => (others => '0')));      
     begin
         if rising_edge(pixCLK) then
-            shifterLoopRow : for i in 0 to W - 1 loop
-                shifterLoopCol : for j in 0 to W - 1 loop
-                    if j = 0 then
-                        if filterInputsRST(i) = '1' then
-                            directShifterArray(i)(j) <= (others => '0');
+            if filterCtrl = '1' then
+                for i in 0 to W - 1 loop
+                    for j in 0 to W - 1 loop
+                        if j = 0 then
+                            adderSignals(i)(j) :=  postMultArray(i)(j);   
                         else
-                            directShifterArray(i)(j) <= filterInputs(i);
-                        end if;
+                            adderSignals(i)(j) := adderSignals(i)(j - 1) + postMultArray(i)(j);
+                        end if;  
+                    end loop;
+                end loop;
+                
+                for i in 0 to W - 1 loop
+                    if i = 0 then
+                        adderRes(i) :=  adderSignals(i)(W - 1);   
                     else
-                        if filterInputsRST(i) = '1' then
-                            directShifterArray(i)(j) <=  (others => '0');
+                        adderRes(i) := adderRes(i - 1) + adderSignals(i)(W - 1);
+                    end if;  
+                end loop;
+                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));                   
+            end if;
+        end if;
+    end process;
+    
+    filterInputs(0) <= dataIn;
+    DirectShifter : process(pixCLK, shifterCtrl)
+    begin
+        if rising_edge(pixCLK) then
+            if shifterCtrl = '1' then   
+                shifterLoopRow : for i in 0 to W - 1 loop
+                    shifterLoopCol : for j in 0 to W - 1 loop
+                        if j = 0 then
+                            if filterInputsRST(i) = '1' then
+                                directShifterArray(i)(j) <= (others => '0');
+                            else
+                                directShifterArray(i)(j) <= filterInputs(i);
+                            end if;
                         else
-                            directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);
+                            if filterInputsRST(i) = '1' then
+                                directShifterArray(i)(j) <=  (others => '0');
+                            else
+                                directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);
+                            end if;
                         end if;
-                    end if;
-                end loop shifterLoopCol;
-            end loop shifterLoopRow;
+                    end loop shifterLoopCol;
+                end loop shifterLoopRow;
+            end if;
         end if;
     end process;
     
@@ -221,7 +278,7 @@ begin
                           dataRdy => dataRdy,
                           FRST => RST,
                           FRSTO => FRST,
-                          filterCtrl => filterCtrl,
+                          filterCtrl => open,
                           WEA => WEA(i),
                           WEB => WEB(i),
                           RSTA => filterInputsRST(i*2 + 1),

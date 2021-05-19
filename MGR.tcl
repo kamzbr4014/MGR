@@ -28,12 +28,12 @@ proc checkRequiredFiles { origin_dir} {
   }
 
   set files [list \
+   "${origin_dir}/hdl/preprocessing_module.vhd" \
+   "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/BRAM_TDP_module.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/hdl/ramPKG.vhd" \
    "${origin_dir}/hdl/filter_module.vhd" \
-   "${origin_dir}/hdl/preprocessing_module.vhd" \
-   "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/tb/filter_module_tb.vhd" \
    "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
@@ -154,7 +154,7 @@ set_property -name "webtalk.questa_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.riviera_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.vcs_export_sim" -value "4" -objects $obj
 set_property -name "webtalk.xsim_export_sim" -value "4" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "639" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "656" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -164,16 +164,26 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 set files [list \
+ [file normalize "${origin_dir}/hdl/preprocessing_module.vhd"] \
+ [file normalize "${origin_dir}/hdl/dci_module.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_TDP_module.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
  [file normalize "${origin_dir}/hdl/ramPKG.vhd"] \
  [file normalize "${origin_dir}/hdl/filter_module.vhd"] \
- [file normalize "${origin_dir}/hdl/preprocessing_module.vhd"] \
- [file normalize "${origin_dir}/hdl/dci_module.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
 # Set 'sources_1' fileset file properties for remote files
+set file "$origin_dir/hdl/preprocessing_module.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/hdl/dci_module.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 set file "$origin_dir/hdl/BRAM_TDP_module.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
@@ -194,24 +204,17 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/hdl/preprocessing_module.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
-set file "$origin_dir/hdl/dci_module.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
 
 # Set 'sources_1' fileset file properties for local files
 # None
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
-set_property -name "top" -value "filter_module" -objects $obj
+set_property -name "top" -value "dci_preprocessing_wrapper" -objects $obj
+set_property -name "top_arch" -value "STRUCTURE" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
+set_property -name "top_file" -value "$proj_dir/MGR.srcs/sources_1/imports/hdl/dci_preprocessing_wrapper.vhd" -objects $obj
+set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -432,6 +435,41 @@ proc cr_bd_dci_preprocessing { parentCell } {
 
   # Create address segments
 
+  # Perform GUI Layout
+  regenerate_bd_layout -layout_string {
+   "ActiveEmotionalView":"Default View",
+   "Default View_ScaleFactor":"0.769465",
+   "Default View_TopLeft":"-1094,-344",
+   "ExpandedHierarchyInLayout":"",
+   "commentid":"",
+   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS
+#  -string -flagsOSRD
+preplace port dataReadyOut -pg 1 -lvl 3 -x 190 -y 40 -defaultsOSRD
+preplace port hSync -pg 1 -lvl 0 -x -640 -y 80 -defaultsOSRD
+preplace port mainCLK -pg 1 -lvl 1 -x -550 -y -160 -defaultsOSRD -top
+preplace port pixCLK -pg 1 -lvl 0 -x -640 -y 0 -defaultsOSRD
+preplace port vSync -pg 1 -lvl 0 -x -640 -y 140 -defaultsOSRD
+preplace port RST -pg 1 -lvl 0 -x -640 -y 40 -defaultsOSRD
+preplace portBus dataOut -pg 1 -lvl 3 -x 190 -y 160 -defaultsOSRD
+preplace portBus dciData -pg 1 -lvl 0 -x -640 -y 180 -defaultsOSRD
+preplace inst preprocessing_module_0 -pg 1 -lvl 2 -x -130 -y 90 -defaultsOSRD -resize 190 268
+preplace inst dci_module_0 -pg 1 -lvl 1 -x -440 -y 90 -defaultsOSRD -resize 262 268
+preplace netloc dciData_1 1 0 1 N 180
+preplace netloc dci_module_0_bOut 1 1 1 -260 140n
+preplace netloc dci_module_0_dataReady 1 1 1 -270 20n
+preplace netloc dci_module_0_gOut 1 1 1 -260 90n
+preplace netloc dci_module_0_rOut 1 1 1 -280 40n
+preplace netloc hSync_1 1 0 1 -610 80n
+preplace netloc mainCLK_1 1 0 1 -610 -150n
+preplace netloc pixCLK_1 1 0 2 -620J -70 -270
+preplace netloc preprocessing_module_0_dataOut 1 2 1 -10 150n
+preplace netloc preprocessing_module_0_dataReadyOut 1 2 1 -10 30n
+preplace netloc vSync_1 1 0 1 N 140
+preplace netloc RST_1 1 0 1 -620 40n
+levelinfo -pg 1 -640 -440 -130 190
+pagesize -pg 1 -db -bbox -sgen -780 -260 330 350
+"
+}
 
   # Restore current instance
   current_bd_instance $oldCurInst
