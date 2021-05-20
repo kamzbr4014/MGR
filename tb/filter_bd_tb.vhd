@@ -2,9 +2,9 @@
 -- Company: Wroclaw University of Science and Technology 
 -- Engineer: Kamil Zbroinski
 -- 
--- Create Date: 24.04.2021 23:03:36
--- Design Name: Dci and preprocessing block design tb
--- Module Name: dci_preprocessing_bd_tb - Behavioral
+-- Create Date: 20.05.2021 10:01:32
+-- Design Name: filter block design testbench
+-- Module Name: filter_bd_tb - Behavioral
 -- Project Name: Master thesis project 
 -- Target Devices: Basys3
 -- Tool Versions: Vivado 2020.2
@@ -22,51 +22,82 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.std_logic_textio.all, std.textio.all;
-
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
-use IEEE.NUMERIC_STD.ALL;
+--use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity dci_preprocessing_bd_tb is 
-end dci_preprocessing_bd_tb;
+entity test_filter_bd is 
+end test_filter_bd;
 
 
-architecture Behavioral of dci_preprocessing_bd_tb is
-    component dci_preprocessing is
-        port ( dataOut       : out STD_LOGIC_VECTOR (7 downto 0);
-          dataReadyOut  : out STD_LOGIC;
-          dciData       : in STD_LOGIC_VECTOR (7 downto 0);
-          hSync         : in STD_LOGIC;
-          RST           : in STD_LOGIC;
-          mainCLK       : in STD_LOGIC;
-          pixCLK        : in STD_LOGIC;
-          vSync         : in STD_LOGIC);
-          
-    end component dci_preprocessing;
+architecture TB of test_filter_bd is
+
+    component filter_bd is
+    port (
+        FilterOut : out STD_LOGIC_VECTOR (7 downto 0);
+        RST : in STD_LOGIC;
+        dbgFCtrl : out STD_LOGIC;
+        dciData : in STD_LOGIC_VECTOR (7 downto 0);
+        hSync : in STD_LOGIC;
+        mainCLK : in STD_LOGIC;
+        pixCLK : in STD_LOGIC;
+        vSync : in STD_LOGIC
+    );
+    end component filter_bd;
 
     type colorArray is array (2 downto 0) of STD_LOGIC_VECTOR (7 downto 0);
-    
+    signal FilterOut : STD_LOGIC_VECTOR (7 downto 0);
+    signal RST : STD_LOGIC;
+    signal dciData : STD_LOGIC_VECTOR (7 downto 0);
+    signal hSync : STD_LOGIC;
+    signal dbgFCtrl: std_logic;
+    signal mainCLK : STD_LOGIC;
+    signal pixCLK : STD_LOGIC;
+    signal vSync : STD_LOGIC;
     signal dataOut      : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
     signal dataReadyOut : STD_LOGIC := '0';
-    signal dciData      : STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
-    signal hSync        : STD_LOGIC := '0';
-    signal mainCLK      : STD_LOGIC := '0';
-    signal pixCLK       : STD_LOGIC := '0';
-    signal vSync        : STD_LOGIC := '0';
-    signal RST        : STD_LOGIC := '0';
     signal cArray       : colorArray;
     signal vFlag        : STD_LOGIC := '0';
-    
+    constant pixCLKPeriod : time := 10 ns;
+    constant mainCLKPeriod : time := 5 ns;
     constant dataFilePathTs  : string  := "../../../../../../matlab/gen/test_pattern_1_dat.txt";
     constant dataFilePath    : string  := "../../../../../matlab/gen/test_pattern_1_dat.txt";
-    constant resFilePath     : string  := "../../../../../tb/res/test_pattern_1_res.txt";            
+    constant resFilePath     : string  := "../../../../../tb/res/test_pattern_1_res.txt";  
 begin
-    DataReader : process 
+
+    DUT: component filter_bd port map (
+        FilterOut => FilterOut,
+        RST => RST,
+        dbgFCtrl => dbgFCtrl,
+        dciData => dciData,
+        hSync => hSync,
+        mainCLK => mainCLK,
+        pixCLK => pixCLK,
+        vSync => vSync
+    );
+
+    MainCLKStim : process
+    begin
+        mainCLK <= '0';
+        wait for mainCLKPeriod / 2;
+        mainCLK <= '1';
+        wait for mainCLKPeriod / 2;
+    end process;
+
+    PixCLKStim : process
+    begin
+        pixCLK <= '0';
+        wait for pixCLKPeriod / 2;
+        pixCLK <= '1';
+        wait for pixCLKPeriod / 2;
+    end process;
+
+DataReader : process 
         file textFile           : text;
         variable textLine       : line;
         variable readDciData    : std_logic_vector(7 downto 0) := (others => '0');
@@ -115,7 +146,7 @@ begin
         end loop;
         
         file_close(textFile);
-        report "Read done";
+        report "---------- Read done ----------";
         wait;
     
     end process;
@@ -127,12 +158,13 @@ begin
         variable oLine  : line;
     begin
         file_open(simRes, resFilePath, write_mode);
+--        wait for 70 ns; -- hardcoded wait for filter processing 
         while true loop
             wait until rising_edge(pixCLK);
             if flagCount < 10 then
                 flagCount := flagCount + 1;
-                if dataReadyOut = '1' then
-                    hwrite(oLine, dataOut, right, 2);
+                if dbgFCtrl = '1' then
+                    hwrite(oLine, FilterOut, right, 2);
                     writeline(simRes, oLine);
                     flagCount := 0;    
                 end if; 
@@ -141,34 +173,9 @@ begin
              end if;   
         end loop;
         file_close(simRes);
-        report "Write done";
-        wait;
+        report "---------- Write done ----------";
+        assert false report "Test: OK" severity failure;
+   
     end process;
-    
-    MainCLKStim : process
-    begin
-         mainCLK <= '0';
-         wait for 10.0 ns;
-         mainCLK <= '1';
-         wait for 10.0 ns;
-    end process;
-    
-    PixCLKStim : process
-    begin
-          pixCLK <= '0';
-          wait for 50.0 ns;
-          pixCLK <= '1';
-          wait for 50.0 ns;
-    end process;
-    
-    uut: component dci_preprocessing 
-        port map ( dataOut => dataOut,
-              RST => RST,
-              dataReadyOut => dataReadyOut,
-              dciData => dciData,
-              hSync => hSync,
-              mainCLK => mainCLK,
-              pixCLK => pixCLK,
-              vSync => vSync);
 
-end Behavioral;
+end TB;

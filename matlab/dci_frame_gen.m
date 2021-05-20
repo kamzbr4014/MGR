@@ -1,6 +1,6 @@
 clear all;
 
-img = imread('data/test_pattern_1.jpg');
+img = imread('data/test_plane.jpg');
 [rImg, cImg, dImg] = size(img);
 
 rPlane = img(:,:,1);
