@@ -64,7 +64,7 @@ begin
                 outBuff <= std_logic_vector(shift_right(tmpC, 2));
                 dataRdBuff <= '1';
              else
-                outBuff <= (others => '0');
+                outBuff <= outBuff;
                 dataRdBuff <= '0';
              end if;
          end if;    

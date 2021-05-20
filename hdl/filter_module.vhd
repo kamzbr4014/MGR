@@ -18,7 +18,6 @@
 -- 
 ----------------------------------------------------------------------------------
 
-
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.std_logic_textio.all, std.textio.all;
@@ -38,62 +37,51 @@ Library UNIMACRO;
 use UNIMACRO.vcomponents.all;
 
 entity filter_module is
-  Generic (W            : integer := 3;
+  Generic (W            : integer := 5;
            imgWidth     : integer := 640;
            imgHeight    : integer := 480);
   Port (pixCLK  : in std_logic;
         RST     : in std_logic;
         dataRdy : in std_logic;
+        dbgFCtrl: out std_logic;
         dataIn  : in std_logic_vector(7 downto 0);
         dataOut : out std_logic_vector(7 downto 0));
 end filter_module;
 
 architecture Behavioral of filter_module is
    
-    constant numOfBRAMs     : integer := ((W - 1) / 2) - 1;
-    constant numOfBRAMPorts : integer := ((W - 1) * 2) - 1;
-    type dataIO_t is array(numOfBRAMPorts downto 0) of std_logic_vector(7 downto 0);
-    type addrBus_t is array(numOfBRAMPorts downto 0) of std_logic_vector(10 downto 0);
-    subtype WEN_t is std_logic_vector(numOfBRAMPorts downto 0);
-    type stdSignalarr_t     is array (numOfBRAMPorts downto 0) of std_logic;
-    type stdVectSignalarr_t is array (numOfBRAMPorts downto 0) of std_logic_vector(7 downto 0);    
-    signal DOA          :  dataIO_t := (others => x"00");
-    signal DOB          :  dataIO_t := (others => x"00");
-    signal DIA          :  dataIO_t := (others => x"00");
-    signal DIB          :  dataIO_t := (others => x"00");
-    signal ADDRA        :  addrBus_t := (others => (others => '0'));
-    signal ADDRB        :  addrBus_t := (others => (others => '0'));
-    signal dataRdys     : STD_LOGIC := '0';
-    signal EN           : stdSignalarr_t := (others => '0');
-    signal FRST         : STD_LOGIC := '0';
-    signal cntIn        : STD_LOGIC_VECTOR (9 downto 0) := (others => '0');
-    signal nCtrlEnIn    : STD_LOGIC := '0';
-    signal WEA          : stdSignalarr_t := (others => '0');
-    signal WEB          : stdSignalarr_t := (others => '0');
-    signal RSTA         : stdSignalarr_t := (others => '0');
-    signal RSTB         : stdSignalarr_t := (others => '0');
-    signal cntOut       : STD_LOGIC_VECTOR (9 downto 0) := (others => '0');
-    signal FRSTOut      : STD_LOGIC := '0';
-    signal nCtrlEnOut   : stdSignalarr_t :=(others => '0');
-    type directShifterRow_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
-    type directShifterArray_t is array (W - 1 downto 0) of directShifterRow_t;
-    type postMultRow_t is array(W - 1 downto 0) of unsigned(15 downto 0);
-    type postAdderRow_t is array(W - 1 downto 0) of unsigned(15 downto 0);
-    type postMultArray_t is array (W - 1 downto 0) of postMultRow_t;
-    type postAdderArray_t is array (W - 1 downto 0) of postAdderRow_t;
-    signal postMultArray : postMultArray_t := (others => (others => (others => '0')));
-    signal directShifterArray : directShifterArray_t := (others => (others => (others => '0'))); -- TODO: take look at signal initialization
-    -- refactor needed --
-    type filterInputs_t is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
-    signal filterInputs : filterInputs_t;
-    type filterInputsRST_t is array(W - 1 downto 0) of std_logic;    
-    signal filterInputsRST : filterInputsRST_t;
-    signal filterCtrl : std_logic := '0';
-    signal shifterCtrl : std_logic := '0';
-    type coeffsRow_t is array(W - 1 downto 0) of  std_logic_vector(7 downto 0);
-    type coeffsArray_t is array(W - 1 downto 0) of  coeffsRow_t;
-    constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
-    constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
+    constant numOfBRAMs         : integer := ((W - 1) / 2) - 1;
+    constant numOfBRAMPorts     : integer := ((W - 1) * 2) - 1;
+    type addrBus_t              is array(numOfBRAMPorts downto 0) of std_logic_vector(10 downto 0);
+    type coeffsRow_t            is array(W - 1 downto 0) of  std_logic_vector(7 downto 0);
+    type coeffsArray_t          is array(W - 1 downto 0) of  coeffsRow_t;
+    type stdSignalarr_t         is array (numOfBRAMPorts downto 0) of std_logic;
+    type directShifterRow_t     is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
+    type directShifterArray_t   is array (W - 1 downto 0) of directShifterRow_t;
+    type postMultRow_t          is array(W - 1 downto 0) of unsigned(15 downto 0);
+    type postAdderRow_t         is array(W - 1 downto 0) of unsigned(15 downto 0);
+    type postMultArray_t        is array (W - 1 downto 0) of postMultRow_t;
+    type postAdderArray_t       is array (W - 1 downto 0) of postAdderRow_t;
+    type filterInputs_t         is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
+    type filterInputsRST_t      is array(W - 1 downto 0) of std_logic;    
+    
+    signal ADDRA                :  addrBus_t := (others => (others => '0'));
+    signal ADDRB                :  addrBus_t := (others => (others => '0'));
+    signal dataRdys             : STD_LOGIC := '0';
+    signal EN                   : stdSignalarr_t := (others => '0');
+    signal FRST                 : STD_LOGIC := '0';
+    signal nCtrlEnIn            : STD_LOGIC := '0';
+    signal WEA                  : stdSignalarr_t := (others => '0');
+    signal WEB                  : stdSignalarr_t := (others => '0');
+    signal RSTA                 : stdSignalarr_t := (others => '0');
+    signal RSTB                 : stdSignalarr_t := (others => '0');
+    signal nCtrlEnOut           : stdSignalarr_t :=(others => '0');
+    signal postMultArray        : postMultArray_t := (others => (others => (others => '0')));
+    signal directShifterArray   : directShifterArray_t := (others => (others => (others => '0'))); -- TODO: take look at signal initialization
+    signal filterInputs         : filterInputs_t;
+    signal filterInputsRST      : filterInputsRST_t;
+    signal filterCtrl           : std_logic := '0';
+    signal shifterCtrl          : std_logic := '0';
     
     impure function coeffsInit(filename : string) return coeffsArray_t is
         file  textFile          : text;
@@ -110,20 +98,12 @@ architecture Behavioral of filter_module is
             end loop;
         end loop;
         return tmpArr;
-    end function;    
-    
+    end function;  
+      
+    constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
+    constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
     constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL); 
 begin
---------- process added only for generate design ---------
---    process(pixCLK)
---        variable sum : unsigned(7 downto 0);
---    begin
---        for i in 0 to W - 1 loop
---            sum := sum + unsigned(directShifterArray(i)(W - 1));
---        end loop;
---        dataOut <= std_logic_vector(sum);
---    end process;
-----------------------------------------------------------
     shifterCtrlProc : process(pixClk, dataRdy)
     begin
         if rising_edge(pixCLK) then
@@ -145,6 +125,7 @@ begin
             end if;
         end if;
     end process;
+    dbgFCtrl <= filterCtrl;
     
     MultPrcess : process(pixCLK, filterCtrl)
     begin
@@ -183,7 +164,9 @@ begin
                         adderRes(i) := adderRes(i - 1) + adderSignals(i)(W - 1);
                     end if;  
                 end loop;
-                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));                   
+                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));
+                else 
+                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));                  
             end if;
         end if;
     end process;
