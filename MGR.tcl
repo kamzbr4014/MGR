@@ -148,15 +148,15 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.activehdl_export_sim" -value "13" -objects $obj
-set_property -name "webtalk.ies_export_sim" -value "13" -objects $obj
-set_property -name "webtalk.modelsim_export_sim" -value "13" -objects $obj
-set_property -name "webtalk.questa_export_sim" -value "13" -objects $obj
-set_property -name "webtalk.riviera_export_sim" -value "13" -objects $obj
-set_property -name "webtalk.vcs_export_sim" -value "13" -objects $obj
-set_property -name "webtalk.xcelium_export_sim" -value "9" -objects $obj
-set_property -name "webtalk.xsim_export_sim" -value "13" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "702" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "15" -objects $obj
+set_property -name "webtalk.ies_export_sim" -value "15" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "15" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "15" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "15" -objects $obj
+set_property -name "webtalk.vcs_export_sim" -value "15" -objects $obj
+set_property -name "webtalk.xcelium_export_sim" -value "11" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "15" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "706" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -491,9 +491,9 @@ preplace port vSync -pg 1 -lvl 0 -x -30 -y 200 -defaultsOSRD
 preplace port dbgFCtrl -pg 1 -lvl 4 -x 930 -y 70 -defaultsOSRD
 preplace portBus FilterOut -pg 1 -lvl 4 -x 930 -y 210 -defaultsOSRD
 preplace portBus dciData -pg 1 -lvl 0 -x -30 -y 240 -defaultsOSRD
-preplace inst dci_module_0 -pg 1 -lvl 1 -x 150 -y 140 -defaultsOSRD -resize 212 288
 preplace inst preprocessing_module_0 -pg 1 -lvl 2 -x 470 -y 160 -defaultsOSRD -resize 221 258
 preplace inst filter_module_0 -pg 1 -lvl 3 -x 770 -y 150 -defaultsOSRD -resize 224 228
+preplace inst dci_module_0 -pg 1 -lvl 1 -x 150 -y 140 -defaultsOSRD -resize 212 288
 preplace netloc RST_1 1 0 3 0 -40 N -40 610
 preplace netloc dciData_1 1 0 1 NJ 240
 preplace netloc dci_module_0_bOut 1 1 1 290 210n

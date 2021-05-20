@@ -121,9 +121,9 @@ begin
                         else
                             regCount := '0';
                             dataReadyFlag  <= '1';
-                            rReg <= frameSR(15 downto 11) & "000";
-                            gReg <= frameSR(10 downto 5)  & "00";
-                            bReg <= frameSR(4  downto 0)  & "000";
+                            rReg <= frameSR(15 downto 11) & frameSR(15 downto 13);
+                            gReg <= frameSR(10 downto 5)  & frameSR(10 downto 9);
+                            bReg <= frameSR(4  downto 0)  & frameSR(4 downto 2);
                         end if;
                     else
                         dataReadyFlag  <= '0';
