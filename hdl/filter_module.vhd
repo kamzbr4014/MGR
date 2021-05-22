@@ -103,11 +103,21 @@ architecture Behavioral of filter_module is
     constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
     constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
     constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL); 
+    
+    type FlushShifterRow_t is array((W - 1)/2 - 1 downto 0) of std_logic_vector(7 downto 0);
+    type FlushShifter_t is array(W - 1 downto 0) of FlushShifterRow_t;
+    signal FlushShifter : FlushShifter_t := (others => (others => (others => '0')));
+    signal zeroFlush    : std_logic := '0';
+    signal shifterFlush : std_logic := '0';
+    signal rowDataCollected : std_logic := '0';
+    signal colDataCollected : std_logic := '0';
+    signal postMultTrgg : std_logic := '0';
+    signal dbgFilterOut : std_logic := '0';
 begin
-    shifterCtrlProc : process(pixClk, dataRdy)
+    shifterCtrlProc : process(pixClk, dataRdy, rowDataCollected)
     begin
         if rising_edge(pixCLK) then
-            if dataRdy = '1' then
+            if dataRdy = '1' and rowDataCollected = '1' then -- mabey we should move collecteddata flag to filter ctrl
                 shifterCtrl <= not shifterCtrl;
             else
                 shifterCtrl <= '0';        
@@ -118,35 +128,39 @@ begin
     filterCtrlProc : process(pixClk, shifterCtrl)
     begin
         if rising_edge(pixCLK) then
-            if shifterCtrl = '1' then
+            if shifterCtrl = '1' and colDataCollected = '1' then
                 filterCtrl <= not filterCtrl;
             else
                 filterCtrl <= '0';        
             end if;
         end if;
     end process;
-    dbgFCtrl <= filterCtrl;
+    ------- dbg Only ---------
+    dbgFCtrl <= dbgFilterOut;
     
     MultPrcess : process(pixCLK, filterCtrl)
     begin
         if rising_edge(pixCLK) then
             if filterCtrl = '1' then
+                postMultTrgg <= '1';
                 for i in 0 to W - 1 loop
                     for j in 0 to W - 1 loop
                         postMultArray(i)(j) <= unsigned(coeffsArray(i)(j)) * unsigned(directShifterArray(i)(j));   
                     end loop;
-                end loop;    
-            end if;
+                end loop; 
+             else
+                postMultTrgg <= '0';   
+             end if;
         end if;
     end process;
     
-    AdderProcess : process(pixCLK, filterCtrl)
+    AdderProcess : process(pixCLK, postMultTrgg)
         type adderRes_t is array(W - 1 downto 0) of unsigned(15 downto 0);
         variable adderRes : adderRes_t := (others => (others => '0'));
         variable adderSignals :  postAdderArray_t := (others => (others => (others => '0')));      
     begin
         if rising_edge(pixCLK) then
-            if filterCtrl = '1' then
+            if postMultTrgg = '1' then
                 for i in 0 to W - 1 loop
                     for j in 0 to W - 1 loop
                         if j = 0 then
@@ -165,8 +179,10 @@ begin
                     end if;  
                 end loop;
                 dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));
+                dbgFilterOut <= '1';
                 else 
-                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));                  
+                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));
+                dbgFilterOut <= '0';                  
             end if;
         end if;
     end process;
@@ -175,21 +191,54 @@ begin
     DirectShifter : process(pixCLK, shifterCtrl)
     begin
         if rising_edge(pixCLK) then
-            if shifterCtrl = '1' then   
+            if shifterCtrl = '1' then
+                FlushShifterLoopRow : for i in 0 to  W - 1 loop
+                    FlushShifterLoopCol : for j in 0 to  FlushShifterRow_t'length - 1 loop
+                        if j = 0 then 
+                            FlushShifter(i)(j) <= filterInputs(i);    
+                        else
+                            FlushShifter(i)(j) <= FlushShifter(i)(j - 1);
+                        end if;
+                    end loop;
+                end loop;  
                 shifterLoopRow : for i in 0 to W - 1 loop
                     shifterLoopCol : for j in 0 to W - 1 loop
                         if j = 0 then
                             if filterInputsRST(i) = '1' then
                                 directShifterArray(i)(j) <= (others => '0');
                             else
-                                directShifterArray(i)(j) <= filterInputs(i);
+                                if zeroFlush = '1' then
+                                    directShifterArray(i)(j) <= (others => '0'); 
+                                else
+                                    directShifterArray(i)(j) <= filterInputs(i);
+                                end if;           
                             end if;
+                        elsif j > 0 and j <= (W - 1)/2 then                      
+                            if filterInputsRST(i) = '1' then
+                                directShifterArray(i)(j) <=  (others => '0');
+                            else
+                                if shifterFlush = '1' then
+                                    directShifterArray(i)(j) <= FlushShifter(i)(j - 1);
+                                else
+                                    directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);
+                                end if;
+                            end if;
+                        elsif j > (W - 1)/2 then
+                            if filterInputsRST(i) = '1' then
+                                directShifterArray(i)(j) <=  (others => '0');
+                            else
+                                if shifterFlush = '1' then
+                                    directShifterArray(i)(j) <= (others => '0');
+                                else
+                                    directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);
+                                end if;
+                            end if;                             
                         else
                             if filterInputsRST(i) = '1' then
                                 directShifterArray(i)(j) <=  (others => '0');
                             else
-                                directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);
-                            end if;
+                                directShifterArray(i)(j) <=  directShifterArray(i)(j - 1);                          
+                            end if;                                
                         end if;
                     end loop shifterLoopCol;
                 end loop shifterLoopRow;
@@ -250,11 +299,12 @@ begin
                           WEB => WEB(i));    
         end generate BRAMN; 
     end generate BRAMGen;
-    
+
     BRAMCtrlGen : for i in 0 to numOfBRAMs generate
             BRAMctrl0 : if i = 0 generate
                 BRAMctrl : BRAM_ctrl_logic
-                        generic map ( imgWidth => imgWidth,
+                        generic map ( filterSize => W, 
+                          imgWidth => imgWidth,
                           imgHeight => imgHeight)
                         port map (CLK => pixCLK,
                           EN => '1',
@@ -268,11 +318,16 @@ begin
                           RSTB => filterInputsRST(i*2 + 2),
                           ADDRA => ADDRA(i),
                           ADDRB => ADDRB(i),
+                          zeroFlush => zeroFlush,
+                          shifterFlush => shifterFlush,
+                          rowDataCollected => rowDataCollected,
+                          colDataCollected => colDataCollected,
                           nCtrlEnOut => nCtrlEnOut(i));
             end generate BRAMctrl0;
             BRAMctrlN : if i > 0 generate
                 BRAMctrl : BRAM_ctrl_logic
-                        generic map ( imgWidth => imgWidth,
+                        generic map ( filterSize => W, 
+                          imgWidth => imgWidth,
                           imgHeight => imgHeight)                
                         port map (CLK => pixCLK,
                           EN => nCtrlEnOut(i - 1),
@@ -285,7 +340,11 @@ begin
                           RSTA => filterInputsRST(i*2 + 1),
                           RSTB => filterInputsRST(i*2 + 2),
                           ADDRA => ADDRA(i),
-                          ADDRB => ADDRB(i),                          
+                          ADDRB => ADDRB(i), 
+                          zeroFlush => open,
+                          shifterFlush => open,
+                          rowDataCollected => open,  
+                          colDataCollected => open,                       
                           nCtrlEnOut => nCtrlEnOut(i));            
             end generate BRAMctrlN;
         end generate BRAMCtrlGen;              

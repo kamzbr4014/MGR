@@ -33,22 +33,26 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 package RamPKG is
     component BRAM_ctrl_logic is
-        Generic ( isMaster  : boolean := false;
-                  imgWidth  : integer := 640;
-                  imgHeight : integer := 480);
+        Generic ( filterSize: integer := 5;
+                imgWidth    : integer := 640;
+                imgHeight   : integer := 480);
         Port ( CLK          : in STD_LOGIC;
-               EN           : in STD_LOGIC;
-               dataRdy      : in STD_LOGIC;
-               FRST         : in STD_LOGIC;
-               FRSTO        : out STD_LOGIC;
-               filterCtrl   : out STD_LOGIC;           
-               WEA          : out STD_LOGIC;
-               WEB          : out STD_LOGIC;
-               RSTA         : out STD_LOGIC;
-               RSTB         : out STD_LOGIC;
-               nCtrlEnOut   : out STD_LOGIC;
-               ADDRA        : out STD_LOGIC_VECTOR(10 downto 0);
-               ADDRB        : out STD_LOGIC_VECTOR(10 downto 0));
+                EN           : in STD_LOGIC;
+                dataRdy      : in STD_LOGIC;
+                FRST         : in STD_LOGIC;
+                FRSTO        : out STD_LOGIC;
+                filterCtrl   : out STD_LOGIC;           
+                WEA          : out STD_LOGIC;
+                WEB          : out STD_LOGIC;
+                RSTA         : out STD_LOGIC;
+                RSTB         : out STD_LOGIC;
+                nCtrlEnOut   : out STD_LOGIC;
+                colDataCollected : out std_logic;
+                rowDataCollected : out std_logic;
+                shifterFlush : out std_logic;
+                zeroFlush    : out std_logic;
+                ADDRA        : out STD_LOGIC_VECTOR(10 downto 0);
+                ADDRB        : out STD_LOGIC_VECTOR(10 downto 0));
     end component;
     component BRAM_TDP_RF_module
         Generic ( BRAMSize  : integer := 2048);      

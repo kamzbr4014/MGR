@@ -32,7 +32,7 @@ use IEEE.NUMERIC_STD.ALL;
 --use UNISIM.VComponents.all;
 
 entity BRAM_ctrl_logic is
-    Generic ( isMaster  : boolean := false;
+    Generic ( filterSize: integer := 5; -- TODO: add functionality to removed bool flag - generate flag for shifter only in master
               imgWidth  : integer := 640;
               imgHeight : integer := 480);
     Port ( CLK          : in STD_LOGIC;
@@ -46,6 +46,10 @@ entity BRAM_ctrl_logic is
            RSTA         : out STD_LOGIC;
            RSTB         : out STD_LOGIC;
            nCtrlEnOut   : out STD_LOGIC;
+           colDataCollected : out std_logic;
+           rowDataCollected : out std_logic;
+           shifterFlush : out std_logic;
+           zeroFlush    : out std_logic;
            ADDRA        : out STD_LOGIC_VECTOR(10 downto 0);
            ADDRB        : out STD_LOGIC_VECTOR(10 downto 0));
 end BRAM_ctrl_logic;
@@ -71,7 +75,10 @@ architecture Behavioral of BRAM_ctrl_logic is
     signal RSTAS, nRSTAS                    : std_logic := '1';
     signal RSTBS, nRSTBS                    : std_logic := '1';
     signal FRSTOS, nFRSTOS                  : std_logic := '0';
-    
+    signal zeroFlushS, nZeroFlushS    : std_logic := '0';
+    signal shifterFlushS, nShifterFlushS : std_logic := '0';
+    signal rowDataCollectedS, nRowDataCollectedS : std_logic := '0';
+    signal colDataCollectedS, nColDataCollectedS : std_logic := '0';
 begin
     ClkCtrlStateNUpdate : process(CLK, FRST)
     begin
@@ -127,7 +134,11 @@ begin
                 ADDRBS          <= std_logic_vector(rowCnt(10 downto 0) + addrOffset);
                 RSTAS           <= '1';
                 RSTBS           <= '1';
-                FRSTOS          <= '0';  
+                FRSTOS          <= '0'; 
+                zeroFlushS <= '0';
+                rowDataCollectedS <= '0'; -- reset val after zero will cause errors in next frame!
+                shifterFlushS <= '0';
+                colDataCollectedS <= '0';
             else
                 intRST          <= nIntRST;
                 rowBufferPhase  <= nRowBufferPhase;
@@ -138,11 +149,17 @@ begin
                 ADDRBS          <= nADDRBS;
                 RSTAS           <= nRSTAS;
                 RSTBS           <= nRSTBS;
-                FRSTOS          <= nFRSTOS;                     
+                FRSTOS          <= nFRSTOS;
+                zeroFlushS      <= nZeroFlushS;   
+                rowDataCollectedS <= nRowDataCollectedS; 
+                shifterFlushS   <= nShifterFlushS;   
+                colDataCollectedS <= ncolDataCollectedS;                 
             end if;
         end if;
     end process;
-            
+--        signal zeroFlushS, nZeroFlushS    : std_logic := '0';
+--    signal shifterFlushS, nShifterFlushS : std_logic := '0';
+--    signal rowDataCollectedS, nRowDataCollectedS : std_logic := '0';        
     CntHandler : process(clkCtrlState, FRST, intRST,rowCnt,ADDRAS,ADDRBS,FRSTOS,colCnt)
         variable tmpRowCnt, tmpColCnt : unsigned(15 downto 0) := (others => '0');
     begin
@@ -156,7 +173,15 @@ begin
         nADDRAS         <= (others => '0'); 
         nADDRBS         <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));        
         nFRSTOS         <= '0';
+        nzeroFlushS     <= '0';
+        nrowDataCollectedS <= '0';
+        nshifterFlushS  <= '0'; 
         FRSTO           <= '0';
+        zeroFlush <= '0';
+        shifterFlush <= '0';
+        rowDataCollected <= '0';
+        ncolDataCollectedS <= '0';
+        colDataCollected <= '0'; 
     else
         nIntRST         <= '0';
         nRowCnt         <= rowCnt;
@@ -168,17 +193,34 @@ begin
         nADDRBS         <= ADDRBS;
         nFRSTOS         <= '0';
         FRSTO           <= FRSTOS;
+        nzeroFlushS     <= zeroFlushS;
+        zeroFlush       <= zeroFlushS;
+        nrowDataCollectedS <= rowDataCollectedS;
+        rowDataCollected <= rowDataCollectedS;
+        nshifterFlushS  <= '0'; 
+        shifterFlush <= shifterFlushS;
         frameEnd        <= '0';
+        ncolDataCollectedS <= colDataCollectedS;
+        colDataCollected <= colDataCollectedS;
         case clkCtrlState is    
             when sFetch =>
                 tmpRowCnt := rowCnt + 1;
                 if tmpRowCnt < imgWidth then
+                    if tmpRowCnt = (filterSize - 1)/2 then
+                        if RowDataCollectedS = '1' then
+                            nColDataCollectedS <= '1';
+                        end if;
+                        nzeroFlushS <= '0';    
+                    end if;
                     nRowCnt <= tmpRowCnt;
                     nADDRAS <= std_logic_vector(rowCnt(10 downto 0) + 1);       
                     nADDRBS <= std_logic_vector(rowCnt(10 downto 0) + addrOffset + 1);  
                 else
                     tmpColCnt := colCnt + 1;
                     if tmpColCnt < imgHeight then
+                        if tmpColCnt = (filterSize - 1)/2 then
+                            nRowDataCollectedS <= '1';
+                        end if;
                         nColCnt <= tmpColCnt;
                         frameEnd <= '0';    -- dbg only
                     else
@@ -189,8 +231,13 @@ begin
                     end if; 
                     nRowCnt <= (others => '0');
                     nRowFull <= '1';
+                    nzeroFlushS <= '1';
                     nADDRAS <= (others => '0');
                     nADDRBS <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));
+                end if;
+            when sWait =>
+                if tmpRowCnt = (filterSize - 1)/2 then
+                    nshifterFlushS <= '1';     
                 end if;
             when others =>    
         end case; 
