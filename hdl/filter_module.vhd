@@ -113,6 +113,7 @@ architecture Behavioral of filter_module is
     signal colDataCollected : std_logic := '0';
     signal postMultTrgg : std_logic := '0';
     signal dbgFilterOut : std_logic := '0';
+    signal filterMuxCtrl : std_logic := '0';
 begin
     shifterCtrlProc : process(pixClk, dataRdy, rowDataCollected)
     begin
@@ -246,16 +247,18 @@ begin
         end if;
     end process;
     
-    FirstRowInputsRST : process(pixCLK, dataRdy, FRST)
+    FirstRowInputsRST : process(pixCLK, dataRdy, FRST, filterMuxCtrl)
     begin
         if rising_edge(pixCLK) then
             if FRST = '1' then
                 filterInputsRST(0) <= '1';
             else
-                if dataRdy = '1' then
-                   filterInputsRST(0) <= '0'; 
+--                if dataRdy = '1' then
+--                   filterInputsRST(0) <= '0'; 
+                if filterMuxCtrl = '1' then
+                   filterInputsRST(0) <= '1'; 
                 else
-                   filterInputsRST(0) <= filterInputsRST(0);     
+                   filterInputsRST(0) <= '0';     
                 end if;
             end if;
         end if;
@@ -275,8 +278,8 @@ begin
                           DIB => filterInputs(i*2 + 1),       
                           ENA => '1',       
                           ENB => '1',       
-                          RSTA => filterInputsRST(i*2 + 1),     
-                          RSTB => filterInputsRST(i*2 + 2),     
+                          RSTA => '0',     
+                          RSTB => '0',     
                           WEA => WEA(i),      
                           WEB => WEB(i));            
         end generate BRAM0;
@@ -293,8 +296,8 @@ begin
                           DIB => filterInputs(i*2 + 1),       
                           ENA => '1',       
                           ENB => '1',       
-                          RSTA => filterInputsRST(i*2 + 1),     
-                          RSTB => filterInputsRST(i*2 + 2),     
+                          RSTA => '0',     
+                          RSTB => '0',     
                           WEA => WEA(i),      
                           WEB => WEB(i));    
         end generate BRAMN; 
@@ -303,15 +306,17 @@ begin
     BRAMCtrlGen : for i in 0 to numOfBRAMs generate
             BRAMctrl0 : if i = 0 generate
                 BRAMctrl : BRAM_ctrl_logic
-                        generic map ( filterSize => W, 
+                        generic map ( filterSize => W,
+                          index => i, 
                           imgWidth => imgWidth,
-                          imgHeight => imgHeight)
+                          imgHeight => imgHeight - 2*i)
                         port map (CLK => pixCLK,
                           EN => '1',
                           dataRdy => dataRdy,
                           FRST => RST,
                           FRSTO => FRST,
                           filterCtrl => open,
+                          filterMuxCtrl => filterMuxCtrl,
                           WEA => WEA(i),
                           WEB => WEB(i),
                           RSTA => filterInputsRST(i*2 + 1),
@@ -326,7 +331,8 @@ begin
             end generate BRAMctrl0;
             BRAMctrlN : if i > 0 generate
                 BRAMctrl : BRAM_ctrl_logic
-                        generic map ( filterSize => W, 
+                        generic map ( filterSize => W,
+                          index => i, 
                           imgWidth => imgWidth,
                           imgHeight => imgHeight)                
                         port map (CLK => pixCLK,
@@ -335,6 +341,7 @@ begin
                           FRST => FRST,
                           FRSTO => open,
                           filterCtrl => open,
+                          filterMuxCtrl => open,
                           WEA => WEA(i),
                           WEB => WEB(i),
                           RSTA => filterInputsRST(i*2 + 1),

@@ -57,8 +57,8 @@ architecture Behavioral of filter_module_tb is
     signal dataIn  : std_logic_vector(7 downto 0) := (others => '0');
     signal dataOut : std_logic_vector(7 downto 0);
     signal dbgFCtrl     : std_logic;
-    constant W : integer := 5;
-    constant imgWidth : integer := 10;
+    constant W : integer := 7;
+    constant imgWidth : integer := 15;
     constant imgHeight : integer := 10;    
     constant pixCLKPeriod     : time := 10 ns;
 begin

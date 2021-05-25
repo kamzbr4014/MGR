@@ -34,6 +34,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 package RamPKG is
     component BRAM_ctrl_logic is
         Generic ( filterSize: integer := 5;
+                index   : integer := 0;
                 imgWidth    : integer := 640;
                 imgHeight   : integer := 480);
         Port ( CLK          : in STD_LOGIC;
@@ -41,7 +42,8 @@ package RamPKG is
                 dataRdy      : in STD_LOGIC;
                 FRST         : in STD_LOGIC;
                 FRSTO        : out STD_LOGIC;
-                filterCtrl   : out STD_LOGIC;           
+                filterCtrl   : out STD_LOGIC;
+                filterMuxCtrl: out STD_LOGIC;            
                 WEA          : out STD_LOGIC;
                 WEB          : out STD_LOGIC;
                 RSTA         : out STD_LOGIC;

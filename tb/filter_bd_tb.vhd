@@ -63,7 +63,7 @@ architecture TB of test_filter_bd is
     signal dataReadyOut : STD_LOGIC := '0';
     signal cArray       : colorArray;
     signal vFlag        : STD_LOGIC := '0';
-    constant W : integer := 5;
+    constant W : integer := 7;
     constant pixCLKPeriod : time := 10 ns;
     constant mainCLKPeriod : time := 5 ns;
     constant dataFilePathTs  : string  := "../../../../../../matlab/gen/test_pattern_1_dat.txt";
@@ -145,7 +145,6 @@ DataReader : process
             vFlag <= readVFlag;
             wait until rising_edge(pixCLK);
         end loop;
-        
         file_close(textFile);
         report "---------- Read done ----------";
         wait;

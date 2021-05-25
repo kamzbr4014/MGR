@@ -33,6 +33,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity BRAM_ctrl_logic is
     Generic ( filterSize: integer := 5; -- TODO: add functionality to removed bool flag - generate flag for shifter only in master
+              index : integer := 0;
               imgWidth  : integer := 640;
               imgHeight : integer := 480);
     Port ( CLK          : in STD_LOGIC;
@@ -40,7 +41,8 @@ entity BRAM_ctrl_logic is
            dataRdy      : in STD_LOGIC;
            FRST         : in STD_LOGIC;
            FRSTO        : out STD_LOGIC;
-           filterCtrl   : out STD_LOGIC;           
+           filterCtrl   : out STD_LOGIC;
+           filterMuxCtrl: out STD_LOGIC;            
            WEA          : out STD_LOGIC;
            WEB          : out STD_LOGIC;
            RSTA         : out STD_LOGIC;
@@ -56,12 +58,12 @@ end BRAM_ctrl_logic;
 
 architecture Behavioral of BRAM_ctrl_logic is
     type clkCtrlState_t     is (sWait, sFetch, sIdle);
-    type rowBufferPhase_t   is (pA, pAB, pABC);
+    type rowBufferPhase_t   is (pA, pAB, pABC, pNotA, pNotAB, pNotABC);
     subtype rowCnt_t        is unsigned(15 downto 0);
     subtype colCnt_t        is unsigned(15 downto 0);
     constant addrOffset                     : integer   := 1024 - 1;
     signal rowCnt, nRowCnt                  : rowCnt_t := (others => '0');
-    signal colCnt, nColCnt                  : colCnt_t := (others => '0');
+    signal colCnt, nColCnt                  : colCnt_t := to_unsigned((2*index), 16);
     signal clkCtrlState                     : clkCtrlState_t := sIdle; 
     signal nClkCtrlState                    : clkCtrlState_t := sIdle;
     signal rowFull, nRowFull                : std_logic := '0';
@@ -79,6 +81,62 @@ architecture Behavioral of BRAM_ctrl_logic is
     signal shifterFlushS, nShifterFlushS : std_logic := '0';
     signal rowDataCollectedS, nRowDataCollectedS : std_logic := '0';
     signal colDataCollectedS, nColDataCollectedS : std_logic := '0';
+    signal postFrameEnd : std_logic := '0';
+--    signal tmpRstState , ntmpRstState : rowBufferPhase_t := pA;
+--    constant tmpRstState : rowBufferPhase_t := functionOfDefVal(index);
+    type frameResetHandler_r is record
+        transitionState : rowBufferPhase_t;
+        resetState : rowBufferPhase_t;
+        counterResetVal : unsigned(15 downto 0);  
+    end record frameResetHandler_r;
+
+    
+    impure function functionOfDefVal (index : integer) return frameResetHandler_r is
+        variable tmp : integer := 0;
+        variable state : frameResetHandler_r;
+        constant bramCount : integer := (filterSize - 1)/2;
+    begin
+        tmp := bramCount mod 2;
+        if filterSize = 3 then
+            state.transitionState := pABC;
+            state.resetState := pAB;
+            state.counterResetVal := to_unsigned(bramCount, 16);  
+        else
+            if tmp = 0 then
+                if index <= (bramCount/2) - 1 then
+                    state.transitionState := pNotA;
+                    state.resetState := pABC;
+                    state.counterResetVal := to_unsigned(bramCount, 16);
+                    -- for lower than => pABC
+                else
+                    state.transitionState := pABC;
+                    state.resetState := pA;
+                    state.counterResetVal := to_unsigned(bramCount, 16);
+                    -- for greater than => pA
+                end if;
+            else
+                if index < (bramCount + 1)/2 - 1  then
+                    state.transitionState := pNotA;
+                    state.resetState := pABC;
+                    state.counterResetVal := to_unsigned(bramCount, 16);
+                    -- => pABC
+                elsif index = (bramCount + 1)/2 - 1 then
+                    state.transitionState := pABC;
+                    state.resetState := pAB;
+                    state.counterResetVal := to_unsigned(bramCount, 16);
+                    -- => pAB
+                else
+                state.transitionState := pABC;
+                state.resetState := pA;
+                state.counterResetVal := to_unsigned(bramCount + 1, 16);
+                    -- => pA
+                end if;
+            end if;
+        end if;
+        return state;
+    end function;
+    
+    constant frameResetHandler : frameResetHandler_r := functionOfDefVal(index);
 begin
     ClkCtrlStateNUpdate : process(CLK, FRST)
     begin
@@ -199,7 +257,7 @@ begin
         rowDataCollected <= rowDataCollectedS;
         nshifterFlushS  <= '0'; 
         shifterFlush <= shifterFlushS;
-        frameEnd        <= '0';
+--        frameEnd        <= '0';
         ncolDataCollectedS <= colDataCollectedS;
         colDataCollected <= colDataCollectedS;
         case clkCtrlState is    
@@ -217,34 +275,44 @@ begin
                     nADDRBS <= std_logic_vector(rowCnt(10 downto 0) + addrOffset + 1);  
                 else
                     tmpColCnt := colCnt + 1;
-                    if tmpColCnt < imgHeight then
-                        if tmpColCnt = (filterSize - 1)/2 then
+                    if tmpColCnt < imgHeight + (filterSize - 1)/2 then
+                        nColCnt <= tmpColCnt;                   
+                        if tmpColCnt < imgHeight then
+                            if tmpColCnt = (filterSize - 1)/2 then
+                                nRowDataCollectedS <= '1';
+                            end if;
+                            filterMuxCtrl <= '0';
+                        else
+                            filterMuxCtrl <= '1';
                             nRowDataCollectedS <= '1';
+                            if tmpColCnt = imgHeight then
+                                frameEnd <= '1';    -- dbg only
+                            end if;
                         end if;
-                        nColCnt <= tmpColCnt;
-                        frameEnd <= '0';    -- dbg only
-                    else
-                        nColCnt <= (others => '0');
-                        frameEnd <= '1';    -- dbg only
-                        nIntRST <= '1';
-                        nFRSTOS <= '1';           
+                    else 
+                        tmpColCnt := (others => '0');
+                        nColCnt <= frameResetHandler.counterResetVal;
+                        filterMuxCtrl <= '0';
+                        postFrameEnd <= '1';    -- dbg only 
                     end if; 
                     nRowCnt <= (others => '0');
                     nRowFull <= '1';
                     nzeroFlushS <= '1';
                     nADDRAS <= (others => '0');
-                    nADDRBS <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));
+                    nADDRBS <= std_logic_vector(to_unsigned(addrOffset, ADDRBS'length));  
                 end if;
             when sWait =>
                 if tmpRowCnt = (filterSize - 1)/2 then
                     nshifterFlushS <= '1';     
                 end if;
+                frameEnd <= '0';
+                postFrameEnd <= '0';
             when others =>    
         end case; 
     end if;
     end process;
     
-    ClkCtrlStateData : process (clkCtrlState, FRST, intRST, rowBufferPhase, frameEnd, nRowFull, RSTAS, RSTBS)
+    ClkCtrlStateData : process (clkCtrlState, postFrameEnd, FRST, intRST, rowBufferPhase, frameEnd, nRowFull, RSTAS, RSTBS)
     begin
         if FRST = '1' or intRST = '1'  then
             nRowBufferPhase     <= pA;
@@ -259,7 +327,7 @@ begin
             filterCtrl          <= '0';              
         else
             nRowBufferPhase     <= rowBufferPhase;
-            nCtrlEnOut          <= '0';
+--            nCtrlEnOut          <= '0';
             WEA                 <= '0';
             WEB                 <= '0';
             nRSTAS              <= RSTAS;
@@ -271,14 +339,25 @@ begin
                 when sFetch =>
                     enLatch <= '1';
                     filterCtrl <= '1'; 
-                    if nRowFull = '1' then  -- TODO: rename signal (next prefix is confusing)                        
-                        case rowBufferPhase is
-                            when pA =>
-                                nRowBufferPhase <= pAB;
-                            when pAB => 
-                                nRowBufferPhase <= pABC;
-                            when pABC =>
-                         end case;
+                    if nRowFull = '1' then  -- TODO: rename signal (next prefix is confusing)
+                        if postFrameEnd = '1' then
+                            nRowBufferPhase <= frameResetHandler.resetState;
+                            enLatch <= '0'; 
+                        elsif frameEnd = '1' then
+                            nRowBufferPhase <= frameResetHandler.transitionState;       
+                        else                       
+                            case rowBufferPhase is
+                                when pA =>
+                                    nRowBufferPhase <= pAB;
+                                when pAB => 
+                                    nRowBufferPhase <= pABC;
+                                when pNotA =>
+                                    nRowBufferPhase <= pNotAB;
+                                when pNotAB =>
+                                    nRowBufferPhase <= pNotABC;                                    
+                                when others =>
+                             end case;
+                         end if;
                      end if;
                  
                     case rowBufferPhase is
@@ -289,6 +368,9 @@ begin
                             WEA <= '1';
                             WEB <= '1';
                         when pABC => 
+                            WEA <= '1';
+                            WEB <= '1';
+                        when others =>
                             WEA <= '1';
                             WEB <= '1';                       
                      end case;
@@ -308,7 +390,16 @@ begin
                             nRSTBS <= '1';
                         when pABC => 
                             nRSTAS <= '0';
-                            nRSTBS <= '0';                            
+                            nRSTBS <= '0';
+                        when pNotA =>
+                            nRSTAS <= '0';
+                            nRSTBS <= '0';
+                        when pNotAB =>
+                            nRSTAS <= '1';
+                            nRSTBS <= '0';
+                        when pNotABC =>
+                            nRSTAS <= '1';
+                            nRSTBS <= '1';                                                                                                              
                      end case;
                 when others =>
             end case;

@@ -149,15 +149,15 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.activehdl_export_sim" -value "18" -objects $obj
-set_property -name "webtalk.ies_export_sim" -value "18" -objects $obj
-set_property -name "webtalk.modelsim_export_sim" -value "18" -objects $obj
-set_property -name "webtalk.questa_export_sim" -value "18" -objects $obj
-set_property -name "webtalk.riviera_export_sim" -value "18" -objects $obj
-set_property -name "webtalk.vcs_export_sim" -value "18" -objects $obj
-set_property -name "webtalk.xcelium_export_sim" -value "14" -objects $obj
-set_property -name "webtalk.xsim_export_sim" -value "18" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "786" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "20" -objects $obj
+set_property -name "webtalk.ies_export_sim" -value "20" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "20" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "20" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "20" -objects $obj
+set_property -name "webtalk.vcs_export_sim" -value "20" -objects $obj
+set_property -name "webtalk.xcelium_export_sim" -value "2" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "20" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "970" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -314,6 +314,9 @@ set obj [get_filesets utils_1]
 
 
 # Adding sources referenced in BDs, if not already added
+if { [get_files preprocessing_module.vhd] == "" } {
+  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/preprocessing_module.vhd
+}
 if { [get_files dci_module.vhd] == "" } {
   import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/dci_module.vhd
 }
@@ -328,9 +331,6 @@ if { [get_files ramPKG.vhd] == "" } {
 }
 if { [get_files filter_module.vhd] == "" } {
   import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/filter_module.vhd
-}
-if { [get_files preprocessing_module.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/preprocessing_module.vhd
 }
 
 
@@ -446,7 +446,7 @@ proc cr_bd_filter_bd { parentCell } {
      return 1
    }
     set_property -dict [ list \
-   CONFIG.W {5} \
+   CONFIG.W {7} \
    CONFIG.imgHeight {350} \
    CONFIG.imgWidth {350} \
  ] $filter_module_0
@@ -486,7 +486,7 @@ proc cr_bd_filter_bd { parentCell } {
    "Default View_ScaleFactor":"1.25",
    "Default View_TopLeft":"-165,-125",
    "ExpandedHierarchyInLayout":"",
-   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS-threadsafe
+   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS
 #  -string -flagsOSRD
 preplace port RST -pg 1 -lvl 0 -x -30 -y 30 -defaultsOSRD
 preplace port hSync -pg 1 -lvl 0 -x -30 -y 160 -defaultsOSRD
