@@ -1,6 +1,11 @@
 clear all;
 
 img = imread('data/test_plane.jpg');
+W = 7;
+stimData = (W-1)/2;
+[rImg, cImg, dImg] = size(img);
+X = zeros(stimData, rImg, 3);
+img = [img; X];
 [rImg, cImg, dImg] = size(img);
 
 rPlane = img(:,:,1);
