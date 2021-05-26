@@ -55,15 +55,17 @@ architecture Behavioral of filter_module is
     type addrBus_t              is array(numOfBRAMPorts downto 0) of std_logic_vector(10 downto 0);
     type coeffsRow_t            is array(W - 1 downto 0) of  std_logic_vector(7 downto 0);
     type coeffsArray_t          is array(W - 1 downto 0) of  coeffsRow_t;
-    type stdSignalarr_t         is array (numOfBRAMPorts downto 0) of std_logic;
+    type stdSignalarr_t         is array(numOfBRAMPorts downto 0) of std_logic;
     type directShifterRow_t     is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
-    type directShifterArray_t   is array (W - 1 downto 0) of directShifterRow_t;
+    type directShifterArray_t   is array(W - 1 downto 0) of directShifterRow_t;
     type postMultRow_t          is array(W - 1 downto 0) of unsigned(15 downto 0);
     type postAdderRow_t         is array(W - 1 downto 0) of unsigned(15 downto 0);
-    type postMultArray_t        is array (W - 1 downto 0) of postMultRow_t;
-    type postAdderArray_t       is array (W - 1 downto 0) of postAdderRow_t;
+    type postMultArray_t        is array(W - 1 downto 0) of postMultRow_t;
+    type postAdderArray_t       is array(W - 1 downto 0) of postAdderRow_t;
     type filterInputs_t         is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     type filterInputsRST_t      is array(W - 1 downto 0) of std_logic;    
+    type FlushShifterRow_t      is array((W - 1)/2 - 1 downto 0) of std_logic_vector(7 downto 0);
+    type FlushShifter_t         is array(W - 1 downto 0) of FlushShifterRow_t;
     
     signal ADDRA                :  addrBus_t := (others => (others => '0'));
     signal ADDRB                :  addrBus_t := (others => (others => '0'));
@@ -82,6 +84,14 @@ architecture Behavioral of filter_module is
     signal filterInputsRST      : filterInputsRST_t;
     signal filterCtrl           : std_logic := '0';
     signal shifterCtrl          : std_logic := '0';
+    signal FlushShifter         : FlushShifter_t := (others => (others => (others => '0')));
+    signal zeroFlush            : std_logic := '0';
+    signal shifterFlush         : std_logic := '0';
+    signal rowDataCollected     : std_logic := '0';
+    signal colDataCollected     : std_logic := '0';
+    signal postMultTrgg         : std_logic := '0';
+    signal dbgFilterOut         : std_logic := '0';
+    signal filterMuxCtrl        : std_logic := '0';
     
     impure function coeffsInit(filename : string) return coeffsArray_t is
         file  textFile          : text;
@@ -103,17 +113,7 @@ architecture Behavioral of filter_module is
     constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
     constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
     constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL); 
-    
-    type FlushShifterRow_t is array((W - 1)/2 - 1 downto 0) of std_logic_vector(7 downto 0);
-    type FlushShifter_t is array(W - 1 downto 0) of FlushShifterRow_t;
-    signal FlushShifter : FlushShifter_t := (others => (others => (others => '0')));
-    signal zeroFlush    : std_logic := '0';
-    signal shifterFlush : std_logic := '0';
-    signal rowDataCollected : std_logic := '0';
-    signal colDataCollected : std_logic := '0';
-    signal postMultTrgg : std_logic := '0';
-    signal dbgFilterOut : std_logic := '0';
-    signal filterMuxCtrl : std_logic := '0';
+
 begin
     shifterCtrlProc : process(pixClk, dataRdy, rowDataCollected)
     begin

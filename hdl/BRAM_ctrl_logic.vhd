@@ -33,7 +33,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity BRAM_ctrl_logic is
     Generic ( filterSize: integer := 5; -- TODO: add functionality to removed bool flag - generate flag for shifter only in master
-              index : integer := 0;
+              index     : integer := 0;
               imgWidth  : integer := 640;
               imgHeight : integer := 480);
     Port ( CLK          : in STD_LOGIC;
@@ -67,7 +67,7 @@ architecture Behavioral of BRAM_ctrl_logic is
     signal clkCtrlState                     : clkCtrlState_t := sIdle; 
     signal nClkCtrlState                    : clkCtrlState_t := sIdle;
     signal rowFull, nRowFull                : std_logic := '0';
-    signal frameEnd                         : std_logic := '0'; -- debug only
+    signal frameEnd, nFrameEnd              : std_logic := '0'; 
     signal intRST, nIntRST                  : std_logic := '0';
     signal enLatch                          : std_logic := '0';
     signal rowBufferPhase , nRowBufferPhase : rowBufferPhase_t := pA;
@@ -77,20 +77,20 @@ architecture Behavioral of BRAM_ctrl_logic is
     signal RSTAS, nRSTAS                    : std_logic := '1';
     signal RSTBS, nRSTBS                    : std_logic := '1';
     signal FRSTOS, nFRSTOS                  : std_logic := '0';
-    signal zeroFlushS, nZeroFlushS    : std_logic := '0';
-    signal shifterFlushS, nShifterFlushS : std_logic := '0';
+    signal zeroFlushS, nZeroFlushS          : std_logic := '0';
+    signal shifterFlushS, nShifterFlushS    : std_logic := '0';
     signal rowDataCollectedS, nRowDataCollectedS : std_logic := '0';
     signal colDataCollectedS, nColDataCollectedS : std_logic := '0';
-    signal postFrameEnd : std_logic := '0';
---    signal tmpRstState , ntmpRstState : rowBufferPhase_t := pA;
---    constant tmpRstState : rowBufferPhase_t := functionOfDefVal(index);
+    signal postFrameEnd, nPostFrameEnd :     std_logic := '0';
+    signal filterMuxCtrlS, nFilterMuxCtrlS  : std_logic := '0';
+    signal nCtrlEnOutS, nnCtrlEnOutS        : std_logic := '0';
+
     type frameResetHandler_r is record
         transitionState : rowBufferPhase_t;
         resetState : rowBufferPhase_t;
         counterResetVal : unsigned(15 downto 0);  
     end record frameResetHandler_r;
 
-    
     impure function functionOfDefVal (index : integer) return frameResetHandler_r is
         variable tmp : integer := 0;
         variable state : frameResetHandler_r;
@@ -135,7 +135,7 @@ architecture Behavioral of BRAM_ctrl_logic is
         end if;
         return state;
     end function;
-    
+  
     constant frameResetHandler : frameResetHandler_r := functionOfDefVal(index);
 begin
     ClkCtrlStateNUpdate : process(CLK, FRST)
@@ -193,10 +193,12 @@ begin
                 RSTAS           <= '1';
                 RSTBS           <= '1';
                 FRSTOS          <= '0'; 
-                zeroFlushS <= '0';
-                rowDataCollectedS <= '0'; -- reset val after zero will cause errors in next frame!
-                shifterFlushS <= '0';
+                zeroFlushS      <= '0';
+                rowDataCollectedS <= '0'; 
                 colDataCollectedS <= '0';
+                shifterFlushS   <= '0';
+                frameEnd        <= '0';
+                postFrameEnd    <= '0';
             else
                 intRST          <= nIntRST;
                 rowBufferPhase  <= nRowBufferPhase;
@@ -210,15 +212,17 @@ begin
                 FRSTOS          <= nFRSTOS;
                 zeroFlushS      <= nZeroFlushS;   
                 rowDataCollectedS <= nRowDataCollectedS; 
+                colDataCollectedS <= ncolDataCollectedS;
                 shifterFlushS   <= nShifterFlushS;   
-                colDataCollectedS <= ncolDataCollectedS;                 
+                frameEnd        <= nFrameEnd;    
+                postFrameEnd    <= nPostFrameEnd;
+                filterMuxCtrlS  <= nFilterMuxCtrlS;             
             end if;
         end if;
     end process;
---        signal zeroFlushS, nZeroFlushS    : std_logic := '0';
---    signal shifterFlushS, nShifterFlushS : std_logic := '0';
---    signal rowDataCollectedS, nRowDataCollectedS : std_logic := '0';        
-    CntHandler : process(clkCtrlState, FRST, intRST,rowCnt,ADDRAS,ADDRBS,FRSTOS,colCnt)
+   
+    CntHandler : process(clkCtrlState, FRST, intRST,rowCnt,ADDRAS, ADDRBS, FRSTOS, colCnt, zeroFlushS, 
+                    rowDataCollectedS, shifterFlushS, colDataCollectedS, frameEnd, postFrameEnd)
         variable tmpRowCnt, tmpColCnt : unsigned(15 downto 0) := (others => '0');
     begin
     if FRST = '1' or intRST = '1' then
@@ -235,11 +239,15 @@ begin
         nrowDataCollectedS <= '0';
         nshifterFlushS  <= '0'; 
         FRSTO           <= '0';
-        zeroFlush <= '0';
-        shifterFlush <= '0';
-        rowDataCollected <= '0';
-        ncolDataCollectedS <= '0';
-        colDataCollected <= '0'; 
+        zeroFlush       <= '0';
+        shifterFlush    <= '0';
+        rowDataCollected    <= '0';
+        ncolDataCollectedS  <= '0';
+        colDataCollected    <= '0';
+        nFrameEnd       <= '0';
+        nPostFrameEnd   <= '0';
+        nFilterMuxCtrlS <= '0';
+        filterMuxCtrl   <= '0';
     else
         nIntRST         <= '0';
         nRowCnt         <= rowCnt;
@@ -253,13 +261,17 @@ begin
         FRSTO           <= FRSTOS;
         nzeroFlushS     <= zeroFlushS;
         zeroFlush       <= zeroFlushS;
-        nrowDataCollectedS <= rowDataCollectedS;
-        rowDataCollected <= rowDataCollectedS;
+        nrowDataCollectedS  <= rowDataCollectedS;
+        rowDataCollected    <= rowDataCollectedS;
         nshifterFlushS  <= '0'; 
-        shifterFlush <= shifterFlushS;
---        frameEnd        <= '0';
+        shifterFlush    <= shifterFlushS;
         ncolDataCollectedS <= colDataCollectedS;
-        colDataCollected <= colDataCollectedS;
+        colDataCollected    <= colDataCollectedS;
+        nFrameEnd       <= frameEnd;
+        nPostFrameEnd   <= postFrameEnd;
+        tmpRowCnt       := RowCnt;
+        nfilterMuxCtrlS <= filterMuxCtrlS;
+        filterMuxCtrl   <= filterMuxCtrlS;
         case clkCtrlState is    
             when sFetch =>
                 tmpRowCnt := rowCnt + 1;
@@ -281,19 +293,19 @@ begin
                             if tmpColCnt = (filterSize - 1)/2 then
                                 nRowDataCollectedS <= '1';
                             end if;
-                            filterMuxCtrl <= '0';
+                            nFilterMuxCtrlS <= '0';
                         else
-                            filterMuxCtrl <= '1';
+                            nFilterMuxCtrlS <= '1';
                             nRowDataCollectedS <= '1';
                             if tmpColCnt = imgHeight then
-                                frameEnd <= '1';    -- dbg only
+                                nframeEnd <= '1';  
                             end if;
                         end if;
                     else 
                         tmpColCnt := (others => '0');
                         nColCnt <= frameResetHandler.counterResetVal;
-                        filterMuxCtrl <= '0';
-                        postFrameEnd <= '1';    -- dbg only 
+                        nFilterMuxCtrlS <= '0';
+                        nPostFrameEnd <= '1';
                     end if; 
                     nRowCnt <= (others => '0');
                     nRowFull <= '1';
@@ -305,14 +317,15 @@ begin
                 if tmpRowCnt = (filterSize - 1)/2 then
                     nshifterFlushS <= '1';     
                 end if;
-                frameEnd <= '0';
-                postFrameEnd <= '0';
+                nFrameEnd <= '0';
+                nPostFrameEnd <= '0';
             when others =>    
         end case; 
     end if;
     end process;
     
-    ClkCtrlStateData : process (clkCtrlState, postFrameEnd, FRST, intRST, rowBufferPhase, frameEnd, nRowFull, RSTAS, RSTBS)
+    ClkCtrlStateData : process (clkCtrlState, nPostFrameEnd, FRST, intRST, rowBufferPhase, frameEnd,
+                         nRowFull, RSTAS, RSTBS, nFrameEnd)
     begin
         if FRST = '1' or intRST = '1'  then
             nRowBufferPhase     <= pA;
@@ -327,7 +340,7 @@ begin
             filterCtrl          <= '0';              
         else
             nRowBufferPhase     <= rowBufferPhase;
---            nCtrlEnOut          <= '0';
+            nCtrlEnOut          <= '0';
             WEA                 <= '0';
             WEB                 <= '0';
             nRSTAS              <= RSTAS;
@@ -340,10 +353,10 @@ begin
                     enLatch <= '1';
                     filterCtrl <= '1'; 
                     if nRowFull = '1' then  -- TODO: rename signal (next prefix is confusing)
-                        if postFrameEnd = '1' then
+                        if nPostFrameEnd = '1' then
                             nRowBufferPhase <= frameResetHandler.resetState;
                             enLatch <= '0'; 
-                        elsif frameEnd = '1' then
+                        elsif nFrameEnd = '1' then
                             nRowBufferPhase <= frameResetHandler.transitionState;       
                         else                       
                             case rowBufferPhase is
@@ -359,7 +372,6 @@ begin
                              end case;
                          end if;
                      end if;
-                 
                     case rowBufferPhase is
                         when pA =>
                             WEA <= '1';
