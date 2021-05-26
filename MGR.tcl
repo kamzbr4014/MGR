@@ -19,6 +19,7 @@ proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
    "D:/XlinxWorkspace/Vivado/MGR/vivado_project/test_filter_bd_behav1.wcfg" \
+   "D:/XlinxWorkspace/Vivado/MGR/vivado_project/filter_module_tb_behav.wcfg" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -35,12 +36,12 @@ proc checkRequiredFiles { origin_dir} {
    "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
    "${origin_dir}/tb/filter_bd_tb.vhd" \
-   "${origin_dir}/tb/preprocessing_module_tb.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
+   "${origin_dir}/tb/filter_module_tb.vhd" \
    "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
+   "${origin_dir}/tb/preprocessing_module_tb.vhd" \
    "${origin_dir}/tb/dci_module_tb.vhd" \
    "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
-   "${origin_dir}/tb/filter_module_tb.vhd" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -148,15 +149,15 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.activehdl_export_sim" -value "15" -objects $obj
-set_property -name "webtalk.ies_export_sim" -value "15" -objects $obj
-set_property -name "webtalk.modelsim_export_sim" -value "15" -objects $obj
-set_property -name "webtalk.questa_export_sim" -value "15" -objects $obj
-set_property -name "webtalk.riviera_export_sim" -value "15" -objects $obj
-set_property -name "webtalk.vcs_export_sim" -value "15" -objects $obj
-set_property -name "webtalk.xcelium_export_sim" -value "11" -objects $obj
-set_property -name "webtalk.xsim_export_sim" -value "15" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "706" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "21" -objects $obj
+set_property -name "webtalk.ies_export_sim" -value "21" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "21" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "21" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "21" -objects $obj
+set_property -name "webtalk.vcs_export_sim" -value "21" -objects $obj
+set_property -name "webtalk.xcelium_export_sim" -value "3" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "21" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "971" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -213,7 +214,10 @@ set_property -name "file_type" -value "VHDL" -objects $file_obj
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
 set_property -name "top" -value "filter_module" -objects $obj
+set_property -name "top_arch" -value "Behavioral" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
+set_property -name "top_file" -value "hdl/filter_module.vhd" -objects $obj
+set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -237,18 +241,19 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 set obj [get_filesets sim_1]
 set files [list \
  [file normalize "${origin_dir}/tb/filter_bd_tb.vhd"] \
- [file normalize "${origin_dir}/tb/preprocessing_module_tb.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
+ [file normalize "${origin_dir}/tb/filter_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd"] \
+ [file normalize "${origin_dir}/tb/preprocessing_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
- [file normalize "${origin_dir}/tb/filter_module_tb.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
 # Add local files from the original project (-no_copy_sources specified)
 set files [list \
  [file normalize "${origin_dir}/vivado_project/test_filter_bd_behav1.wcfg" ]\
+ [file normalize "${origin_dir}/vivado_project/filter_module_tb_behav.wcfg" ]\
 ]
 set added_files [add_files -fileset sim_1 $files]
 
@@ -258,17 +263,22 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/tb/preprocessing_module_tb.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
 set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
+set file "$origin_dir/tb/filter_module_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 set file "$origin_dir/tb/BRAM_ctrl_logic_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/tb/preprocessing_module_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -283,11 +293,6 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 set_property -name "is_enabled" -value "0" -objects $file_obj
-
-set file "$origin_dir/tb/filter_module_tb.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
 
 
 # Set 'sim_1' fileset file properties for local files
@@ -309,6 +314,9 @@ set obj [get_filesets utils_1]
 
 
 # Adding sources referenced in BDs, if not already added
+if { [get_files preprocessing_module.vhd] == "" } {
+  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/preprocessing_module.vhd
+}
 if { [get_files dci_module.vhd] == "" } {
   import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/dci_module.vhd
 }
@@ -323,9 +331,6 @@ if { [get_files ramPKG.vhd] == "" } {
 }
 if { [get_files filter_module.vhd] == "" } {
   import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/filter_module.vhd
-}
-if { [get_files preprocessing_module.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/preprocessing_module.vhd
 }
 
 
@@ -441,7 +446,7 @@ proc cr_bd_filter_bd { parentCell } {
      return 1
    }
     set_property -dict [ list \
-   CONFIG.W {5} \
+   CONFIG.W {7} \
    CONFIG.imgHeight {350} \
    CONFIG.imgWidth {350} \
  ] $filter_module_0
@@ -481,7 +486,7 @@ proc cr_bd_filter_bd { parentCell } {
    "Default View_ScaleFactor":"1.25",
    "Default View_TopLeft":"-165,-125",
    "ExpandedHierarchyInLayout":"",
-   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS-threadsafe
+   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS
 #  -string -flagsOSRD
 preplace port RST -pg 1 -lvl 0 -x -30 -y 30 -defaultsOSRD
 preplace port hSync -pg 1 -lvl 0 -x -30 -y 160 -defaultsOSRD
@@ -492,8 +497,8 @@ preplace port dbgFCtrl -pg 1 -lvl 4 -x 930 -y 70 -defaultsOSRD
 preplace portBus FilterOut -pg 1 -lvl 4 -x 930 -y 210 -defaultsOSRD
 preplace portBus dciData -pg 1 -lvl 0 -x -30 -y 240 -defaultsOSRD
 preplace inst preprocessing_module_0 -pg 1 -lvl 2 -x 470 -y 160 -defaultsOSRD -resize 221 258
-preplace inst filter_module_0 -pg 1 -lvl 3 -x 770 -y 150 -defaultsOSRD -resize 224 228
 preplace inst dci_module_0 -pg 1 -lvl 1 -x 150 -y 140 -defaultsOSRD -resize 212 288
+preplace inst filter_module_0 -pg 1 -lvl 3 -x 770 -y 150 -defaultsOSRD -resize 224 228
 preplace netloc RST_1 1 0 3 0 -40 N -40 610
 preplace netloc dciData_1 1 0 1 NJ 240
 preplace netloc dci_module_0_bOut 1 1 1 290 210n
@@ -549,6 +554,7 @@ if { $obj != "" } {
 
 }
 set obj [get_runs synth_1]
+set_property -name "needs_refresh" -value "1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 
 # set the current synth run

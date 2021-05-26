@@ -40,14 +40,15 @@ end filter_module_tb;
 
 architecture Behavioral of filter_module_tb is
     component filter_module 
-      Generic (W            : integer := 5;
-               imgWidth     : integer := 10;
-               imgHeight    : integer := 5);
-      Port (pixCLK  : in std_logic;
-            RST     : in std_logic;
-            dataRdy : in std_logic;
-            dataIn  : in std_logic_vector(7 downto 0);
-            dataOut : out std_logic_vector(7 downto 0));
+  Generic (W            : integer := 5;
+           imgWidth     : integer := 640;
+           imgHeight    : integer := 480);
+  Port (pixCLK  : in std_logic;
+        RST     : in std_logic;
+        dataRdy : in std_logic;
+        dbgFCtrl: out std_logic;
+        dataIn  : in std_logic_vector(7 downto 0);
+        dataOut : out std_logic_vector(7 downto 0));
     end component;
     
     signal pixCLK  : std_logic;
@@ -55,8 +56,9 @@ architecture Behavioral of filter_module_tb is
     signal dataRdy : std_logic := '0';
     signal dataIn  : std_logic_vector(7 downto 0) := (others => '0');
     signal dataOut : std_logic_vector(7 downto 0);
-    constant W : integer := 5;
-    constant imgWidth : integer := 10;
+    signal dbgFCtrl     : std_logic;
+    constant W : integer := 7;
+    constant imgWidth : integer := 15;
     constant imgHeight : integer := 10;    
     constant pixCLKPeriod     : time := 10 ns;
 begin
@@ -90,8 +92,12 @@ begin
     end process;
 
     uut : filter_module
+        generic map (W => W,
+           imgWidth => imgWidth,
+           imgHeight => imgHeight)
         port map (pixCLK => pixCLK,
            RST => RST,
+           dbgFCtrl => dbgFCtrl,
            dataRdy => dataRdy,
            dataIn => dataIn,
            dataOut => dataOut);

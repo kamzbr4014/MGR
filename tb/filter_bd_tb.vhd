@@ -63,6 +63,7 @@ architecture TB of test_filter_bd is
     signal dataReadyOut : STD_LOGIC := '0';
     signal cArray       : colorArray;
     signal vFlag        : STD_LOGIC := '0';
+    constant W : integer := 7;
     constant pixCLKPeriod : time := 10 ns;
     constant mainCLKPeriod : time := 5 ns;
     constant dataFilePathTs  : string  := "../../../../../../matlab/gen/test_pattern_1_dat.txt";
@@ -70,15 +71,15 @@ architecture TB of test_filter_bd is
     constant resFilePath     : string  := "../../../../../tb/res/test_pattern_1_res.txt";  
 begin
 
-    DUT: component filter_bd port map (
-        FilterOut => FilterOut,
-        RST => RST,
-        dbgFCtrl => dbgFCtrl,
-        dciData => dciData,
-        hSync => hSync,
-        mainCLK => mainCLK,
-        pixCLK => pixCLK,
-        vSync => vSync
+    DUT: component filter_bd 
+        port map (FilterOut => FilterOut,
+            RST => RST,
+            dbgFCtrl => dbgFCtrl,
+            dciData => dciData,
+            hSync => hSync,
+            mainCLK => mainCLK,
+            pixCLK => pixCLK,
+            vSync => vSync
     );
 
     MainCLKStim : process
@@ -144,7 +145,6 @@ DataReader : process
             vFlag <= readVFlag;
             wait until rising_edge(pixCLK);
         end loop;
-        
         file_close(textFile);
         report "---------- Read done ----------";
         wait;
@@ -158,7 +158,7 @@ DataReader : process
         variable oLine  : line;
     begin
         file_open(simRes, resFilePath, write_mode);
---        wait for 70 ns; -- hardcoded wait for filter processing 
+        wait until dbgFCtrl = '1'; -- hardcoded wait for filter processing 
         while true loop
             wait until rising_edge(pixCLK);
             if flagCount < 10 then
@@ -172,10 +172,13 @@ DataReader : process
                 exit;
              end if;   
         end loop;
+        for i in 0 to (W - 1)/2 - 1 loop        --frame end simulation (in continious mode this loop should be unnecessery)
+            hwrite(oLine, FilterOut, right, 2);
+            writeline(simRes, oLine);            
+        end loop;
         file_close(simRes);
         report "---------- Write done ----------";
         assert false report "Test: OK" severity failure;
-   
     end process;
 
 end TB;

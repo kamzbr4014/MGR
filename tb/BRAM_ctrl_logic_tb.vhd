@@ -39,18 +39,23 @@ end BRAM_ctrl_logic_tb;
 ---------------------------------------
 architecture Behavioral of BRAM_ctrl_logic_tb is
     component BRAM_ctrl_logic
-        Generic ( isMaster  : boolean := false;
+        Generic ( filterSize: integer := 5; 
                   imgWidth  : integer := 10;
                   imgHeight : integer := 10);
         Port ( CLK          : in STD_LOGIC;
                EN           : in STD_LOGIC;
                dataRdy      : in STD_LOGIC;
                FRST         : in STD_LOGIC;
+               FRSTO        : out STD_LOGIC;
+               filterCtrl   : out STD_LOGIC;           
                WEA          : out STD_LOGIC;
                WEB          : out STD_LOGIC;
                RSTA         : out STD_LOGIC;
                RSTB         : out STD_LOGIC;
                nCtrlEnOut   : out STD_LOGIC;
+               rowDataCollected : out std_logic;
+               shifterFlush : out std_logic;
+               zeroFlush    : out std_logic;
                ADDRA        : out STD_LOGIC_VECTOR(10 downto 0);
                ADDRB        : out STD_LOGIC_VECTOR(10 downto 0));
     end component;
@@ -78,6 +83,10 @@ architecture Behavioral of BRAM_ctrl_logic_tb is
     signal   nCtrlEnOut   : stdSignalarr_t :=(others => '0');
     signal   ADDRA        : addrBus_t := (others => b"00000000000");
     signal   ADDRB        : addrBus_t := (others => b"00000000000");
+    signal   filterCtrl : std_logic := '0';
+    signal zeroFlush    : std_logic := '0';
+    signal shifterFlush : std_logic := '0';
+    signal rowDataCollected : std_logic := '0';
     constant pixCLKPeriod     : time := 10 ns;
     
 begin
@@ -118,6 +127,10 @@ begin
                       RSTB => RSTB(i),
                       ADDRA => ADDRA(i),
                       ADDRB => ADDRB(i),
+                      filterCtrl => filterCtrl,
+                      zeroFlush => zeroFlush,
+                      shifterFlush => shifterFlush,
+                      rowDataCollected => rowDataCollected,
                       nCtrlEnOut => nCtrlEnOut(i));
         end generate master;
         slaves : if i > 0 generate
@@ -132,6 +145,9 @@ begin
                       RSTB => RSTB(i),
                       ADDRA => ADDRA(i),
                       ADDRB => ADDRB(i),
+                      zeroFlush => open,
+                      shifterFlush => open,
+                      rowDataCollected => open,
                       nCtrlEnOut => nCtrlEnOut(i));            
         end generate slaves;
     end generate uutGen;              
