@@ -35,9 +35,9 @@ proc checkRequiredFiles { origin_dir} {
    "${origin_dir}/hdl/filter_module.vhd" \
    "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
-   "${origin_dir}/tb/filter_bd_tb.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/tb/filter_module_tb.vhd" \
+   "${origin_dir}/tb/filter_bd_tb.vhd" \
    "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
    "${origin_dir}/tb/preprocessing_module_tb.vhd" \
    "${origin_dir}/tb/dci_module_tb.vhd" \
@@ -155,9 +155,8 @@ set_property -name "webtalk.modelsim_export_sim" -value "21" -objects $obj
 set_property -name "webtalk.questa_export_sim" -value "21" -objects $obj
 set_property -name "webtalk.riviera_export_sim" -value "21" -objects $obj
 set_property -name "webtalk.vcs_export_sim" -value "21" -objects $obj
-set_property -name "webtalk.xcelium_export_sim" -value "3" -objects $obj
 set_property -name "webtalk.xsim_export_sim" -value "21" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "971" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "980" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -240,9 +239,9 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
- [file normalize "${origin_dir}/tb/filter_bd_tb.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
  [file normalize "${origin_dir}/tb/filter_module_tb.vhd"] \
+ [file normalize "${origin_dir}/tb/filter_bd_tb.vhd"] \
  [file normalize "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd"] \
  [file normalize "${origin_dir}/tb/preprocessing_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
@@ -258,17 +257,17 @@ set files [list \
 set added_files [add_files -fileset sim_1 $files]
 
 # Set 'sim_1' fileset file properties for remote files
-set file "$origin_dir/tb/filter_bd_tb.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
 set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
 set file "$origin_dir/tb/filter_module_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/tb/filter_bd_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -301,7 +300,7 @@ set_property -name "is_enabled" -value "0" -objects $file_obj
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "test_filter_bd" -objects $obj
+set_property -name "top" -value "filter_module_tb" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
@@ -480,43 +479,6 @@ proc cr_bd_filter_bd { parentCell } {
 
   # Create address segments
 
-  # Perform GUI Layout
-  regenerate_bd_layout -layout_string {
-   "ActiveEmotionalView":"Default View",
-   "Default View_ScaleFactor":"1.25",
-   "Default View_TopLeft":"-165,-125",
-   "ExpandedHierarchyInLayout":"",
-   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS
-#  -string -flagsOSRD
-preplace port RST -pg 1 -lvl 0 -x -30 -y 30 -defaultsOSRD
-preplace port hSync -pg 1 -lvl 0 -x -30 -y 160 -defaultsOSRD
-preplace port mainCLK -pg 1 -lvl 0 -x -30 -y 80 -defaultsOSRD
-preplace port pixCLK -pg 1 -lvl 0 -x -30 -y -30 -defaultsOSRD
-preplace port vSync -pg 1 -lvl 0 -x -30 -y 200 -defaultsOSRD
-preplace port dbgFCtrl -pg 1 -lvl 4 -x 930 -y 70 -defaultsOSRD
-preplace portBus FilterOut -pg 1 -lvl 4 -x 930 -y 210 -defaultsOSRD
-preplace portBus dciData -pg 1 -lvl 0 -x -30 -y 240 -defaultsOSRD
-preplace inst preprocessing_module_0 -pg 1 -lvl 2 -x 470 -y 160 -defaultsOSRD -resize 221 258
-preplace inst dci_module_0 -pg 1 -lvl 1 -x 150 -y 140 -defaultsOSRD -resize 212 288
-preplace inst filter_module_0 -pg 1 -lvl 3 -x 770 -y 150 -defaultsOSRD -resize 224 228
-preplace netloc RST_1 1 0 3 0 -40 N -40 610
-preplace netloc dciData_1 1 0 1 NJ 240
-preplace netloc dci_module_0_bOut 1 1 1 290 210n
-preplace netloc dci_module_0_dataReady 1 1 1 280 60n
-preplace netloc dci_module_0_gOut 1 1 1 N 160
-preplace netloc dci_module_0_rOut 1 1 1 N 110
-preplace netloc filter_module_0_dataOut 1 3 1 910 200n
-preplace netloc hSync_1 1 0 1 NJ 160
-preplace netloc mainCLK_1 1 0 1 NJ 80
-preplace netloc pixCLK_1 1 0 3 -10 -30 290 10 600
-preplace netloc preprocessing_module_0_dataOut 1 2 1 N 220
-preplace netloc preprocessing_module_0_dataReadyOut 1 2 1 600 100n
-preplace netloc vSync_1 1 0 1 NJ 200
-preplace netloc filter_module_0_dbgFCtrl 1 3 1 910 70n
-levelinfo -pg 1 -30 150 470 770 930
-pagesize -pg 1 -db -bbox -sgen -160 -50 1070 640
-"
-}
 
   # Restore current instance
   current_bd_instance $oldCurInst
