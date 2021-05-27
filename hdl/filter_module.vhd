@@ -58,15 +58,15 @@ architecture Behavioral of filter_module is
     type stdSignalarr_t         is array(numOfBRAMPorts downto 0) of std_logic;
     type directShifterRow_t     is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     type directShifterArray_t   is array(W - 1 downto 0) of directShifterRow_t;
-    type postMultRow_t          is array(W - 1 downto 0) of unsigned(15 downto 0);
-    type postAdderRow_t         is array(W - 1 downto 0) of unsigned(15 downto 0);
+    type postMultRow_t          is array((W-1)/2 downto 0) of unsigned(16 downto 0);
+    type postAdderRow_t         is array(W - 1 downto 0) of unsigned(16 downto 0);
     type postMultArray_t        is array(W - 1 downto 0) of postMultRow_t;
     type postAdderArray_t       is array(W - 1 downto 0) of postAdderRow_t;
     type filterInputs_t         is array(W - 1 downto 0) of std_logic_vector(7 downto 0);
     type filterInputsRST_t      is array(W - 1 downto 0) of std_logic;    
     type FlushShifterRow_t      is array((W - 1)/2 - 1 downto 0) of std_logic_vector(7 downto 0);
     type FlushShifter_t         is array(W - 1 downto 0) of FlushShifterRow_t;
-    type adderRes_t is array(W - 1 downto 0) of unsigned(15 downto 0);
+    type adderRes_t is array(W - 1 downto 0) of unsigned(16 downto 0);
     
     signal ADDRA                :  addrBus_t := (others => (others => '0'));
     signal ADDRB                :  addrBus_t := (others => (others => '0'));
@@ -116,7 +116,10 @@ architecture Behavioral of filter_module is
     constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
     constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
     constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL); 
-
+    type preAdderRow_t is array((W-1)/2 downto 0) of unsigned(8 downto 0);
+    type preAdderArray_t is array(W - 1 downto 0) of preAdderRow_t;
+    signal preAdderArray : preAdderArray_t := (others => (others => (others => '0'))); 
+    signal preAddTrigg : std_logic := '0';
 begin
     shifterCtrlProc : process(pixClk, dataRdy, rowDataCollected)
     begin
@@ -141,6 +144,26 @@ begin
     end process;
     ------- dbg Only ---------
     dbgFCtrl <= dbgFilterOut;
+    preAdderProcess : process(pixCLK, filterCtrl)
+    begin
+        if rising_edge(pixCLK) then
+            if filterCtrl = '1' then
+                preAddTrigg <= '1';
+                for i in 0 to W - 1 loop
+                    for j in 0 to (W-1)/2 loop  
+                        if j = (W-1)/2 then
+                            preAdderArray(i)(j) <= '0' & unsigned(directShifterArray(i)(j));
+                        else
+                            preAdderArray(i)(j) <=  ('0' & unsigned(directShifterArray(i)(j))) 
+                                                  + ('0' & unsigned(directShifterArray(i)(j + (W - j -1))));
+                        end if;
+                    end loop;
+                end loop; 
+             else
+                preAddTrigg <= '0';
+             end if;
+        end if;    
+    end process;
     
     MultPrcess : process(pixCLK, filterCtrl)
     begin
@@ -148,8 +171,8 @@ begin
             if filterCtrl = '1' then
                 postMultTrgg <= '1';
                 for i in 0 to W - 1 loop
-                    for j in 0 to W - 1 loop
-                        postMultArray(i)(j) <= unsigned(coeffsArray(i)(j)) * unsigned(directShifterArray(i)(j));   
+                    for j in 0 to (W-1)/2 loop
+                        postMultArray(i)(j) <= unsigned(coeffsArray(i)(j)) * preAdderArray(i)(j);   
                     end loop;
                 end loop; 
              else
@@ -158,26 +181,26 @@ begin
         end if;
     end process;
     
-    AdderProcess : process(pixCLK, postMultTrgg)
+    postAdderProcess : process(pixCLK, postMultTrgg)
         variable dbgFilterOutLatch : std_logic := '0';          
     begin
         if rising_edge(pixCLK) then
             if postMultTrgg = '1' then
                 for i in 0 to W - 1 loop
-                    for j in 0 to W - 1 loop
+                    for j in 0 to (W-1)/2 loop
                         if j = 0 then
                             adderSignals(i)(j) <=  postMultArray(i)(j);   
                         else
-                            adderSignals(i)(j) <= adderSignals(i)(j - 1) + postMultArray(i)(j);
+                            adderSignals(i)(j) <= postMultArray(i)(j - 1) + postMultArray(i)(j);
                         end if;  
                     end loop;
                 end loop;
                 
                 for i in 0 to W - 1 loop
                     if i = 0 then
-                        adderRes(i) <=  adderSignals(i)(W - 1);   
+                        adderRes(i) <=  adderSignals(i)((W-1)/2);   
                     else
-                        adderRes(i) <= adderRes(i - 1) + adderSignals(i)(W - 1);
+                        adderRes(i) <= adderSignals(i - 1)((W-1)/2) + adderSignals(i)((W-1)/2);
                     end if;  
                 end loop;
                 if adderRes(W - 1) /= x"00" or dbgFilterOutLatch = '1' then -- temporary latch for proper dbg generator
@@ -191,7 +214,7 @@ begin
             end if;
         end if;
     end process;
-    dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));
+    dataOut <= std_logic_vector(adderRes(W - 1)(16 downto 9));
     
     filterInputs(0) <= dataIn;
     DirectShifter : process(pixCLK, shifterCtrl)
