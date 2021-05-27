@@ -168,7 +168,7 @@ begin
                         if j = 0 then
                             adderSignals(i)(j) <=  postMultArray(i)(j);   
                         else
-                            adderSignals(i)(j) <= adderSignals(i)(j - 1) + postMultArray(i)(j);
+                            adderSignals(i)(j) <= postMultArray(i)(j - 1) + postMultArray(i)(j);
                         end if;  
                     end loop;
                 end loop;
@@ -177,7 +177,7 @@ begin
                     if i = 0 then
                         adderRes(i) <=  adderSignals(i)(W - 1);   
                     else
-                        adderRes(i) <= adderRes(i - 1) + adderSignals(i)(W - 1);
+                        adderRes(i) <= adderSignals(i - 1)(W - 1) + adderSignals(i)(W - 1);
                     end if;  
                 end loop;
                 if adderRes(W - 1) /= x"00" or dbgFilterOutLatch = '1' then -- temporary latch for proper dbg generator
