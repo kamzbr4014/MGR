@@ -25,6 +25,7 @@ use IEEE.std_logic_textio.all, std.textio.all;
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
 use IEEE.NUMERIC_STD.ALL;
+use IEEE.MATH_REAL.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -115,8 +116,79 @@ architecture Behavioral of filter_module is
       
     constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
     constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
-    constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL); 
-
+    constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL);
+     
+    type retLoopNum_t is array(W downto 0) of natural;
+    
+    impure function adderTreeSignalNum (ww : integer) return retLoopNum_t is
+        variable ws : natural := ((W-1) / 2 + 1);   
+        variable retLoopNum : retLoopNum_t := (others => 0);
+        variable tmp : natural := 0;
+    begin
+    retLoopNum(0) := ws;
+    for i in 0 to W - 1 loop
+        if ws - 1 >= 2 then
+            tmp := natural(floor(real(((ws)/2))));
+            ws := tmp + (ws mod 2);
+            retLoopNum(i + 1) := ws;
+        else
+            retLoopNum(i + 1) := 1; 
+            exit;   
+        end if;
+    end loop;
+        return retLoopNum;
+    end function;
+    
+    impure function adderTreeSignalSum (ww : integer) return natural is
+        variable ws : natural := ((W-1) / 2 + 1);   
+        variable retLoopsum : natural := ws;
+    begin
+    for i in 0 to W loop
+        if ws - 1 >= 2 then
+            ws := (ws - 1)/2 + (ws mod 2);
+            retLoopsum := retLoopsum + ws;
+        else
+            retLoopsum := retLoopsum + 1; 
+            exit;   
+        end if;
+    end loop;
+    return retLoopSum;
+    end function;
+    
+    impure function adderTreeSignalStages (ww : integer) return natural is
+        variable ws : natural := ((W-1) / 2 + 1);   
+        variable retStages : natural := ws;
+    begin
+    for i in 0 to W loop
+        if ws - 1 >= 2 then
+            ws := (ws - 1)/2 + (ws mod 2);
+   
+        else
+            retStages := i + 1; 
+            exit;   
+        end if;
+    end loop;
+    return retStages;
+    end function;
+    
+    function getSum(table : retLoopNum_t; index : integer) return integer is
+        variable tmpSum : integer := 0;
+    begin
+        if index = 0 then
+            tmpSum := 0;
+        else
+            for i in 0 to index - 1 loop
+                tmpSum := tmpSum + table(i);    
+            end loop;  
+        end if;  
+        return tmpSum;
+    end function;
+    
+    constant retStages : natural :=  adderTreeSignalStages(1);
+    constant retLoopsum : natural :=  adderTreeSignalSum(1);
+    constant retLoopNum : retLoopNum_t := adderTreeSignalNum(1);
+    type adderTree_t is array(retLoopsum - 1 downto 0) of unsigned(15 downto 0);
+    signal adderTree : adderTree_t := (others => (others => '0'));
 begin
     shifterCtrlProc : process(pixClk, dataRdy, rowDataCollected)
     begin
@@ -159,7 +231,9 @@ begin
     end process;
     
     AdderProcess : process(pixCLK, postMultTrgg)
-        variable dbgFilterOutLatch : std_logic := '0';          
+        variable dbgFilterOutLatch : std_logic := '0'; 
+        variable dbgOutTmp : unsigned(15 downto 0) := (others => '0');
+        constant zeroSig : unsigned(15 downto 0) := (others => '0');          
     begin
         if rising_edge(pixCLK) then
             if postMultTrgg = '1' then
@@ -168,30 +242,60 @@ begin
                         if j = 0 then
                             adderSignals(i)(j) <=  postMultArray(i)(j);   
                         else
-                            adderSignals(i)(j) <= postMultArray(i)(j - 1) + postMultArray(i)(j);
+                            adderSignals(i)(j) <= adderSignals(i)(j - 1) + postMultArray(i)(j);
                         end if;  
                     end loop;
                 end loop;
                 
-                for i in 0 to W - 1 loop
-                    if i = 0 then
-                        adderRes(i) <=  adderSignals(i)(W - 1);   
-                    else
-                        adderRes(i) <= adderSignals(i - 1)(W - 1) + adderSignals(i)(W - 1);
-                    end if;  
+                for m in 0 to retStages loop    
+                    for n in 0 to retLoopNum(m) - 1 loop
+                        if m = 0 then
+                            if n < retLoopNum(m) - 1 then
+                                adderTree(n) <= adderSignals(n*2)(W - 1) + adderSignals(n*2 + 1)(W - 1);
+                            else
+                                adderTree(n) <= adderSignals(n*2)(W - 1);
+                            end if;
+                        else
+                            if retLoopNum(m - 1) mod 2 = 0 then 
+                                adderTree(n + getSum(retLoopNum, m)) <= adderTree(n*2 + getSum(retLoopNum, m - 1)) 
+                                                                      + adderTree(n*2 + 1 + getSum(retLoopNum, m - 1));
+                            else
+                                if n < retLoopNum(m) - 1 then  
+                                    adderTree(n + getSum(retLoopNum, m)) <= adderTree(n*2 + getSum(retLoopNum, m - 1)) 
+                                                                          + adderTree(n*2 + 1 + getSum(retLoopNum, m - 1));
+                                else
+                                    adderTree(n + getSum(retLoopNum, m)) <= adderTree(n*2 + getSum(retLoopNum, m - 1)); 
+                                end if;                                      
+                            end if;
+                        end if;    
+                    end loop;
                 end loop;
-                if adderRes(W - 1) /= x"00" or dbgFilterOutLatch = '1' then -- temporary latch for proper dbg generator
-                    dbgFilterOutLatch := '1';
-                    dbgFilterOut <= '1';
-                else
-                    dbgFilterOut <= '0';
+                dbgOutTmp := adderTree(adderTree'high);
+                if dbgOutTmp /=  zeroSig then
+                    dbgFilterOut <= '1';    
                 end if;
-                else 
-                dbgFilterOut <= '0';                  
             end if;
         end if;
+
+                
+--                for i in 0 to W - 1 loop
+--                    if i = 0 then
+--                        adderRes(i) <=  adderSignals(i)(W - 1) + 0;   
+--                    else
+--                        adderRes(i) <= adderRes(i - 1) + adderSignals(i)(W - 1);
+--                    end if;  
+--                end loop;
+--                if adderRes(W - 1) /= x"00" or dbgFilterOutLatch = '1' then -- temporary latch for proper dbg generator
+--                    dbgFilterOutLatch := '1';
+--                    dbgFilterOut <= '1';
+--                else
+--                    dbgFilterOut <= '0';
+--                end if;
+--                else 
+--                dbgFilterOut <= '0';                  
+--            end if;
     end process;
-    dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));
+    dataOut <= std_logic_vector(adderTree(adderTree_t'HIGH)(15 downto 8));
     
     filterInputs(0) <= dataIn;
     DirectShifter : process(pixCLK, shifterCtrl)
