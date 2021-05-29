@@ -371,8 +371,6 @@ begin
             if FRST = '1' then
                 filterInputsRST(0) <= '1';
             else
---                if dataRdy = '1' then
---                   filterInputsRST(0) <= '0'; 
                 if filterMuxCtrl = '1' then
                    filterInputsRST(0) <= '1'; 
                 else
