@@ -36,9 +36,9 @@ proc checkRequiredFiles { origin_dir} {
    "${origin_dir}/hdl/filter_module.vhd" \
    "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
+   "${origin_dir}/tb/filter_bd_tb.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
    "${origin_dir}/tb/filter_module_tb.vhd" \
-   "${origin_dir}/tb/filter_bd_tb.vhd" \
    "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
    "${origin_dir}/tb/preprocessing_module_tb.vhd" \
    "${origin_dir}/tb/dci_module_tb.vhd" \
@@ -150,15 +150,15 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.activehdl_export_sim" -value "31" -objects $obj
-set_property -name "webtalk.ies_export_sim" -value "31" -objects $obj
-set_property -name "webtalk.modelsim_export_sim" -value "31" -objects $obj
-set_property -name "webtalk.questa_export_sim" -value "31" -objects $obj
-set_property -name "webtalk.riviera_export_sim" -value "31" -objects $obj
-set_property -name "webtalk.vcs_export_sim" -value "31" -objects $obj
-set_property -name "webtalk.xcelium_export_sim" -value "1" -objects $obj
-set_property -name "webtalk.xsim_export_sim" -value "31" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "1122" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "32" -objects $obj
+set_property -name "webtalk.ies_export_sim" -value "32" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "32" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "32" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "32" -objects $obj
+set_property -name "webtalk.vcs_export_sim" -value "32" -objects $obj
+set_property -name "webtalk.xcelium_export_sim" -value "2" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "32" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "1126" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -241,9 +241,9 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
+ [file normalize "${origin_dir}/tb/filter_bd_tb.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
  [file normalize "${origin_dir}/tb/filter_module_tb.vhd"] \
- [file normalize "${origin_dir}/tb/filter_bd_tb.vhd"] \
  [file normalize "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd"] \
  [file normalize "${origin_dir}/tb/preprocessing_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
@@ -260,17 +260,17 @@ set files [list \
 set added_files [add_files -fileset sim_1 $files]
 
 # Set 'sim_1' fileset file properties for remote files
+set file "$origin_dir/tb/filter_bd_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
 set file "$origin_dir/tb/filter_module_tb.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
-set file "$origin_dir/tb/filter_bd_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -303,7 +303,7 @@ set_property -name "is_enabled" -value "0" -objects $file_obj
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "filter_module_tb" -objects $obj
+set_property -name "top" -value "test_filter_bd" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
@@ -448,7 +448,7 @@ proc cr_bd_filter_bd { parentCell } {
      return 1
    }
     set_property -dict [ list \
-   CONFIG.W {5} \
+   CONFIG.W {7} \
    CONFIG.imgHeight {350} \
    CONFIG.imgWidth {350} \
  ] $filter_module_0

@@ -102,15 +102,12 @@ architecture Behavioral of filter_module is
         variable textLine       : line;
         variable tmpData        : std_logic_vector(7 downto 0);
         variable tmpArr         : coeffsArray_t;
-        variable readSucess     : boolean;
     begin
         file_open(textFile, filename, read_mode);
         for i in 0 to W - 1 loop
             for j in 0 to W - 1 loop
                 readline(textFile, textLine);
                 hread(textLine, tmpData);
-                assert readSucess
-                    report "jebane gowno dupa";
                 tmpArr(i)(j) := tmpData;
             end loop;
         end loop;
