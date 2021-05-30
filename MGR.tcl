@@ -150,15 +150,14 @@ set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_use
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.activehdl_export_sim" -value "32" -objects $obj
-set_property -name "webtalk.ies_export_sim" -value "32" -objects $obj
-set_property -name "webtalk.modelsim_export_sim" -value "32" -objects $obj
-set_property -name "webtalk.questa_export_sim" -value "32" -objects $obj
-set_property -name "webtalk.riviera_export_sim" -value "32" -objects $obj
-set_property -name "webtalk.vcs_export_sim" -value "32" -objects $obj
-set_property -name "webtalk.xcelium_export_sim" -value "2" -objects $obj
-set_property -name "webtalk.xsim_export_sim" -value "32" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "1126" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "38" -objects $obj
+set_property -name "webtalk.ies_export_sim" -value "38" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "38" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "38" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "38" -objects $obj
+set_property -name "webtalk.vcs_export_sim" -value "38" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "38" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "1204" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -523,8 +522,9 @@ pagesize -pg 1 -db -bbox -sgen -160 -50 1070 640
   # Restore current instance
   current_bd_instance $oldCurInst
 
-  validate_bd_design
   save_bd_design
+common::send_gid_msg -ssname BD::TCL -id 2050 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
+
   close_bd_design $design_name 
 }
 # End of cr_bd_filter_bd()
