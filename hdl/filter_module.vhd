@@ -25,6 +25,7 @@ use IEEE.std_logic_textio.all, std.textio.all;
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
 use IEEE.NUMERIC_STD.ALL;
+use IEEE.MATH_REAL.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -109,10 +110,87 @@ architecture Behavioral of filter_module is
         end loop;
         return tmpArr;
     end function;  
-      
+     
     constant coeffsFilePath : string := "../../../../../matlab/gen/filter_coeffs.txt";
     constant coeffsFilePathRTL : string := "../matlab/gen/filter_coeffs.txt";
-    constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL); 
+    constant coeffsArray : coeffsArray_t := coeffsInit(filename => coeffsFilePathRTL);
+     
+    type adderTreeSignalNum_t is array(W downto 0) of natural;
+    
+    impure function getAdderTreeSignalNum                                      --signal number per tree stage
+        return adderTreeSignalNum_t is   
+            variable ws     : natural := ((W-1) / 2 + 1);                      -- start number of sum of roots to match  
+            variable retTab : adderTreeSignalNum_t := (others => 0);
+            variable tmp    : natural := 0;
+    begin
+    retTab(0) := ws;
+    for i in 0 to W - 1 loop
+        if ws - 1 >= 2 then
+            tmp := natural(floor(real(((ws)/2))));                          -- find how many sum of roots are in this stage
+            ws := tmp + (ws mod 2);                                         --
+            retTab(i + 1) := ws;                                          
+        else                                                                -- loop ends at n - 1 stages 
+            retTab(i + 1) := 1;                                             -- so here last stage is assigned manualy
+            exit;                                                           -- it is alwas a single sum of roots
+        end if;
+    end loop;
+        return retTab;
+    end function;
+    
+    impure function getAdderTreeStageOperations (                                   -- return count of operation all stages 
+        table       : adderTreeSignalNum_t;                                         -- (sum and delay buffers)
+        iterator    : natural) 
+        return natural is
+            variable retLoopSum : integer := 0;
+    begin
+    for i in 0 to iterator loop
+        retLoopsum := retLoopsum + table(i);
+    end loop;
+    return retLoopSum;
+    end function;
+    
+    impure function getAdderTreeStages                                           -- return count of tree adder sum stages
+        return natural is 
+            variable ws        : natural := ((W-1) / 2 + 1);   
+            variable retStages : natural := ws;
+            variable tmp       : natural := 0;
+    begin
+    for i in 0 to W loop
+        if ws - 1 >= 2 then
+            tmp := natural(floor(real(((ws)/2))));                     
+            ws := tmp + (ws mod 2);  
+        else
+            retStages := i + 1; 
+            exit;   
+        end if;
+    end loop;
+    return retStages;
+    end function;
+    
+    function getSum(                                                            -- return sum of all stages operation to given moment 'index'
+        table : adderTreeSignalNum_t;                                           -- use for calculate proper index in tree
+        index : integer)
+        return integer is
+            variable tmpSum : integer := 0;
+            variable iterator : integer;
+    begin
+        if index = 0 then
+            tmpSum := 0;
+        else
+            for i in 0 to index - 1 loop
+                tmpSum := tmpSum + table(i);    
+            end loop;
+        end if;  
+        return tmpSum;
+    end function;
+    
+    constant aTStages : natural :=  getAdderTreeStages;
+    constant aTSignalNum : adderTreeSignalNum_t := getAdderTreeSignalNum;
+    constant aTStageOpe : natural :=  getAdderTreeStageOperations(aTSignalNum, aTStages);
+    type adderTree_t is array(aTStageOpe - 1 downto 0) of unsigned(15 downto 0);
+    type preAdderTree_t is array(W - 1 downto 0) of adderTree_t;
+    signal adderTree : adderTree_t := (others => (others => '0'));
+    signal preAdderTree : preAdderTree_t := (others => (others => (others => '0')));
 
 begin
     shifterCtrlProc : process(pixClk, dataRdy, rowDataCollected)
@@ -156,37 +234,74 @@ begin
     end process;
     
     AdderProcess : process(pixCLK, postMultTrgg)
-        type adderRes_t is array(W - 1 downto 0) of unsigned(15 downto 0);
-        variable adderRes : adderRes_t := (others => (others => '0'));
-        variable adderSignals :  postAdderArray_t := (others => (others => (others => '0')));      
+        variable dbgFilterOutLatch : std_logic := '0'; 
+        variable dbgOutTmp : unsigned(15 downto 0) := (others => '0');
+        variable dbgCounter: integer := 0;
+        constant zeroSig : unsigned(15 downto 0) := (others => '0');          
     begin
         if rising_edge(pixCLK) then
             if postMultTrgg = '1' then
-                for i in 0 to W - 1 loop
-                    for j in 0 to W - 1 loop
-                        if j = 0 then
-                            adderSignals(i)(j) :=  postMultArray(i)(j);   
+                for c in 0 to W - 1 loop    
+                for m in 0 to aTStages loop    
+                    for n in 0 to aTSignalNum(m) - 1 loop
+                        if m = 0 then
+                            if n < aTSignalNum(m) - 1 then
+                                preAdderTree(c)(n) <= postMultArray(c)(n*2) + postMultArray(c)(n*2 + 1);
+                            else
+                                preAdderTree(c)(n) <= postMultArray(c)(W - 1);
+                            end if;
                         else
-                            adderSignals(i)(j) := adderSignals(i)(j - 1) + postMultArray(i)(j);
-                        end if;  
+                            if aTSignalNum(m - 1) mod 2 = 0 then 
+                                preAdderTree(c)(n + getSum(aTSignalNum, m)) <= preAdderTree(c)(n*2 + getSum(aTSignalNum, m - 1)) 
+                                                                      + preAdderTree(c)(n*2 + 1 + getSum(aTSignalNum, m - 1));
+                            else
+                                if n < aTSignalNum(m) - 1 then  
+                                    preAdderTree(c)(n + getSum(aTSignalNum, m)) <= preAdderTree(c)(n*2 + getSum(aTSignalNum, m - 1)) 
+                                                                          + preAdderTree(c)(n*2 + 1 + getSum(aTSignalNum, m - 1));
+                                else
+                                    preAdderTree(c)(n + getSum(aTSignalNum, m)) <= preAdderTree(c)(n*2 + getSum(aTSignalNum, m - 1)); 
+                                end if;                                      
+                            end if;
+                        end if;    
+                    end loop;
+                end loop;
+                end loop;
+                   
+                for m in 0 to aTStages loop    
+                    for n in 0 to aTSignalNum(m) - 1 loop
+                        if m = 0 then
+                            if n < aTSignalNum(m) - 1 then
+                                adderTree(n) <= preAdderTree(n*2)(aTStageOpe - 1) + preAdderTree(n*2 + 1)(aTStageOpe - 1);
+                            else
+                                adderTree(n) <= preAdderTree(n*2)(aTStageOpe - 1);
+                            end if;
+                        else
+                            if aTSignalNum(m - 1) mod 2 = 0 then 
+                                adderTree(n + getSum(aTSignalNum, m)) <= adderTree(n*2 + getSum(aTSignalNum, m - 1)) 
+                                                                      + adderTree(n*2 + 1 + getSum(aTSignalNum, m - 1));
+                            else
+                                if n < aTSignalNum(m) - 1 then  
+                                    adderTree(n + getSum(aTSignalNum, m)) <= adderTree(n*2 + getSum(aTSignalNum, m - 1)) 
+                                                                          + adderTree(n*2 + 1 + getSum(aTSignalNum, m - 1));
+                                else
+                                    adderTree(n + getSum(aTSignalNum, m)) <= adderTree(n*2 + getSum(aTSignalNum, m - 1)); 
+                                end if;                                      
+                            end if;
+                        end if;    
                     end loop;
                 end loop;
                 
-                for i in 0 to W - 1 loop
-                    if i = 0 then
-                        adderRes(i) :=  adderSignals(i)(W - 1);   
-                    else
-                        adderRes(i) := adderRes(i - 1) + adderSignals(i)(W - 1);
-                    end if;  
-                end loop;
-                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));
-                dbgFilterOut <= '1';
-                else 
-                dataOut <= std_logic_vector(adderRes(W - 1)(15 downto 8));
-                dbgFilterOut <= '0';                  
+                dbgCounter := dbgCounter + 1;
+                if dbgCounter < 2*(aTStages + 1)  then      -- refactor needed
+                else
+                   dbgFilterOut <= '1'; 
+                end if; 
+            else
+                dbgFilterOut <= '0';
             end if;
         end if;
     end process;
+    dataOut <= std_logic_vector(adderTree(adderTree'high)(15 downto 8));
     
     filterInputs(0) <= dataIn;
     DirectShifter : process(pixCLK, shifterCtrl)
@@ -253,8 +368,6 @@ begin
             if FRST = '1' then
                 filterInputsRST(0) <= '1';
             else
---                if dataRdy = '1' then
---                   filterInputsRST(0) <= '0'; 
                 if filterMuxCtrl = '1' then
                    filterInputsRST(0) <= '1'; 
                 else
