@@ -200,15 +200,18 @@ architecture Behavioral of filter_module is
     type adderTree_t is array(aTStageOpe - 1 downto 0) of unsigned(16 downto 0);
     type preAdderTree_t is array(pATStageOpe - 1 downto 0) of unsigned(16 downto 0);
     type preAdderTreeArray_t is array(W - 1 downto 0) of preAdderTree_t;
+
     signal adderTree : adderTree_t := (others => (others => '0'));
     signal preAdderTree : preAdderTreeArray_t := (others => (others => (others => '0')));
 
     type preAdderRow_t is array((W - 1)/2 downto 0) of unsigned(8 downto 0);
     type preAdderArray_t is array(W - 1 downto 0) of preAdderRow_t;
+
     signal preAdderArray : preAdderArray_t := (others => (others => (others => '0'))); 
     signal preAddTrigg : std_logic := '0';
     attribute dont_touch : string;
     attribute dont_touch of preAdderArray : signal is "true";
+
 begin
     shifterCtrlProc : process(pixClk, dataRdy, rowDataCollected)
     begin
@@ -244,7 +247,7 @@ begin
                         if j = (W-1)/2 then
                             preAdderArray(i)(j) <= '0' & unsigned(directShifterArray(i)(j));
                         elsif j < (W-1)/2 then
-                            preAdderArray(i)(j) <=  ('0' & unsigned(directShifterArray(i)(j))) 
+                            preAdderArray(i)(j) <=  ('0' & unsigned(directShifterArray(i)(j)))              -- attribute needed for non optimalzation of carry bit
                                                   + ('0' & unsigned(directShifterArray(i)((W - 1) - j)));                
                         end if;
                     end loop;
