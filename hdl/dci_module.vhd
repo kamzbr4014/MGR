@@ -42,7 +42,8 @@ entity dci_module is
            rOut     :   out STD_LOGIC_VECTOR (7 downto 0);
            gOut     :   out STD_LOGIC_VECTOR (7 downto 0);
            bOut     :   out STD_LOGIC_VECTOR (7 downto 0));
-    
+           attribute dont_touch : string;
+           attribute dont_touch of dci_module: entity is "true";
 end dci_module;
 
 architecture Behavioral of dci_module is
@@ -57,6 +58,8 @@ architecture Behavioral of dci_module is
     signal edgeDetectorA : std_logic := '0';
     signal edgeDetectorB : std_logic := '0';
     
+--    attribute dont_touch : string;
+--    attribute dont_touch of rReg, gReg, bReg, dataReadyFlag: signal is "true";
 begin
     VSyncTracker : process(mainCLK) -- TODO add CLK synchro
         variable edgePulseRE : std_logic := '0';

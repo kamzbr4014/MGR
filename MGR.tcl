@@ -18,9 +18,12 @@
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
-   "D:/XlinxWorkspace/Vivado/MGR/vivado_project/test_filter_bd_behav1.wcfg" \
-   "D:/XlinxWorkspace/Vivado/MGR/vivado_project/filter_module_tb_behav.wcfg" \
-   "D:/XlinxWorkspace/Vivado/MGR/vivado_project/filter_module_tb_behav1.wcfg" \
+   "C:/Users/kamzb/Desktop/Nowy-folder/MGR/vivado_project/MGR.srcs/sources_1/new/fiilter_wrapper_own_test.vhd" \
+   "C:/Users/kamzb/Desktop/Nowy-folder/MGR/vivado_project/MGR.srcs/constrs_1/new/const.xdc" \
+   "C:/Users/kamzb/Desktop/Nowy-folder/MGR/vivado_project/test_filter_bd_behav1.wcfg" \
+   "C:/Users/kamzb/Desktop/Nowy-folder/MGR/vivado_project/filter_module_tb_behav.wcfg" \
+   "C:/Users/kamzb/Desktop/Nowy-folder/MGR/vivado_project/filter_module_tb_behav1.wcfg" \
+   "C:/Users/kamzb/Desktop/Nowy-folder/MGR/vivado_project/dci_preprocessing_bd_tb_func_synth.wcfg" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -32,17 +35,17 @@ proc checkRequiredFiles { origin_dir} {
   set files [list \
    "${origin_dir}/hdl/BRAM_TDP_module.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
+   "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/ramPKG.vhd" \
    "${origin_dir}/hdl/filter_module.vhd" \
-   "${origin_dir}/hdl/dci_module.vhd" \
    "${origin_dir}/hdl/preprocessing_module.vhd" \
-   "${origin_dir}/tb/filter_bd_tb.vhd" \
    "${origin_dir}/hdl/BRAM_ctrl_logic.vhd" \
+   "${origin_dir}/tb/filter_bd_tb.vhd" \
+   "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
+   "${origin_dir}/tb/dci_module_tb.vhd" \
    "${origin_dir}/tb/filter_module_tb.vhd" \
    "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd" \
    "${origin_dir}/tb/preprocessing_module_tb.vhd" \
-   "${origin_dir}/tb/dci_module_tb.vhd" \
-   "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd" \
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -157,7 +160,7 @@ set_property -name "webtalk.questa_export_sim" -value "38" -objects $obj
 set_property -name "webtalk.riviera_export_sim" -value "38" -objects $obj
 set_property -name "webtalk.vcs_export_sim" -value "38" -objects $obj
 set_property -name "webtalk.xsim_export_sim" -value "38" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "1204" -objects $obj
+set_property -name "webtalk.xsim_launch_sim" -value "1292" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sources_1] ""]} {
@@ -169,12 +172,18 @@ set obj [get_filesets sources_1]
 set files [list \
  [file normalize "${origin_dir}/hdl/BRAM_TDP_module.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
+ [file normalize "${origin_dir}/hdl/dci_module.vhd"] \
  [file normalize "${origin_dir}/hdl/ramPKG.vhd"] \
  [file normalize "${origin_dir}/hdl/filter_module.vhd"] \
- [file normalize "${origin_dir}/hdl/dci_module.vhd"] \
  [file normalize "${origin_dir}/hdl/preprocessing_module.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
+
+# Add local files from the original project (-no_copy_sources specified)
+set files [list \
+ [file normalize "${origin_dir}/vivado_project/MGR.srcs/sources_1/new/fiilter_wrapper_own_test.vhd" ]\
+]
+set added_files [add_files -fileset sources_1 $files]
 
 # Set 'sources_1' fileset file properties for remote files
 set file "$origin_dir/hdl/BRAM_TDP_module.vhd"
@@ -183,6 +192,11 @@ set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
 set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/hdl/dci_module.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -197,11 +211,6 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/hdl/dci_module.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
 set file "$origin_dir/hdl/preprocessing_module.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
@@ -209,15 +218,15 @@ set_property -name "file_type" -value "VHDL" -objects $file_obj
 
 
 # Set 'sources_1' fileset file properties for local files
-# None
+set file "new/fiilter_wrapper_own_test.vhd"
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
-set_property -name "top" -value "filter_module" -objects $obj
-set_property -name "top_arch" -value "Behavioral" -objects $obj
+set_property -name "top" -value "fiilter_wrapper_own_test" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
-set_property -name "top_file" -value "hdl/filter_module.vhd" -objects $obj
-set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Create 'constrs_1' fileset (if not found)
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -227,10 +236,17 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 # Set 'constrs_1' fileset object
 set obj [get_filesets constrs_1]
 
-# Empty (no sources present)
+# Add/Import constrs file and set constrs file properties
+set file "[file normalize "$origin_dir/vivado_project/MGR.srcs/constrs_1/new/const.xdc"]"
+set file_added [add_files -norecurse -fileset $obj [list $file]]
+set file "new/const.xdc"
+set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
+set_property -name "file_type" -value "XDC" -objects $file_obj
 
 # Set 'constrs_1' fileset properties
 set obj [get_filesets constrs_1]
+set_property -name "target_constrs_file" -value "[get_files *new/const.xdc]" -objects $obj
+set_property -name "target_ucf" -value "[get_files *new/const.xdc]" -objects $obj
 
 # Create 'sim_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sim_1] ""]} {
@@ -240,13 +256,13 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
- [file normalize "${origin_dir}/tb/filter_bd_tb.vhd"] \
  [file normalize "${origin_dir}/hdl/BRAM_ctrl_logic.vhd"] \
+ [file normalize "${origin_dir}/tb/filter_bd_tb.vhd"] \
+ [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
+ [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/filter_module_tb.vhd"] \
  [file normalize "${origin_dir}/tb/BRAM_ctrl_logic_tb.vhd"] \
  [file normalize "${origin_dir}/tb/preprocessing_module_tb.vhd"] \
- [file normalize "${origin_dir}/tb/dci_module_tb.vhd"] \
- [file normalize "${origin_dir}/tb/dci_preprocessing_bd_tb.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
@@ -255,16 +271,27 @@ set files [list \
  [file normalize "${origin_dir}/vivado_project/test_filter_bd_behav1.wcfg" ]\
  [file normalize "${origin_dir}/vivado_project/filter_module_tb_behav.wcfg" ]\
  [file normalize "${origin_dir}/vivado_project/filter_module_tb_behav1.wcfg" ]\
+ [file normalize "${origin_dir}/vivado_project/dci_preprocessing_bd_tb_func_synth.wcfg" ]\
 ]
 set added_files [add_files -fileset sim_1 $files]
 
 # Set 'sim_1' fileset file properties for remote files
+set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
 set file "$origin_dir/tb/filter_bd_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/hdl/BRAM_ctrl_logic.vhd"
+set file "$origin_dir/tb/dci_preprocessing_bd_tb.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/tb/dci_module_tb.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -284,17 +311,6 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/tb/dci_module_tb.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
-set file "$origin_dir/tb/dci_preprocessing_bd_tb.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-set_property -name "is_enabled" -value "0" -objects $file_obj
-
 
 # Set 'sim_1' fileset file properties for local files
 # None
@@ -302,6 +318,8 @@ set_property -name "is_enabled" -value "0" -objects $file_obj
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
+set_property -name "nl.mode" -value "funcsim" -objects $obj
+set_property -name "sim_mode" -value "post-implementation" -objects $obj
 set_property -name "top" -value "test_filter_bd" -objects $obj
 set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
@@ -315,23 +333,176 @@ set obj [get_filesets utils_1]
 
 
 # Adding sources referenced in BDs, if not already added
-if { [get_files dci_module.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/dci_module.vhd
-}
 if { [get_files preprocessing_module.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/preprocessing_module.vhd
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/preprocessing_module.vhd
+}
+if { [get_files dci_module.vhd] == "" } {
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/dci_module.vhd
+}
+
+
+# Proc to create BD dci_preprocessing
+proc cr_bd_dci_preprocessing { parentCell } {
+# The design that will be created by this Tcl proc contains the following 
+# module references:
+# dci_module, preprocessing_module
+
+
+
+  # CHANGE DESIGN NAME HERE
+  set design_name dci_preprocessing
+
+  common::send_gid_msg -ssname BD::TCL -id 2010 -severity "INFO" "Currently there is no design <$design_name> in project, so creating one..."
+
+  create_bd_design $design_name
+
+  set bCheckIPsPassed 1
+  ##################################################################
+  # CHECK Modules
+  ##################################################################
+  set bCheckModules 1
+  if { $bCheckModules == 1 } {
+     set list_check_mods "\ 
+  dci_module\
+  preprocessing_module\
+  "
+
+   set list_mods_missing ""
+   common::send_gid_msg -ssname BD::TCL -id 2020 -severity "INFO" "Checking if the following modules exist in the project's sources: $list_check_mods ."
+
+   foreach mod_vlnv $list_check_mods {
+      if { [can_resolve_reference $mod_vlnv] == 0 } {
+         lappend list_mods_missing $mod_vlnv
+      }
+   }
+
+   if { $list_mods_missing ne "" } {
+      catch {common::send_gid_msg -ssname BD::TCL -id 2021 -severity "ERROR" "The following module(s) are not found in the project: $list_mods_missing" }
+      common::send_gid_msg -ssname BD::TCL -id 2022 -severity "INFO" "Please add source files for the missing module(s) above."
+      set bCheckIPsPassed 0
+   }
+}
+
+  if { $bCheckIPsPassed != 1 } {
+    common::send_gid_msg -ssname BD::TCL -id 2023 -severity "WARNING" "Will not continue with creation of design due to the error(s) above."
+    return 3
+  }
+
+  variable script_folder
+
+  if { $parentCell eq "" } {
+     set parentCell [get_bd_cells /]
+  }
+
+  # Get object for parentCell
+  set parentObj [get_bd_cells $parentCell]
+  if { $parentObj == "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2090 -severity "ERROR" "Unable to find parent cell <$parentCell>!"}
+     return
+  }
+
+  # Make sure parentObj is hier blk
+  set parentType [get_property TYPE $parentObj]
+  if { $parentType ne "hier" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2091 -severity "ERROR" "Parent <$parentObj> has TYPE = <$parentType>. Expected to be <hier>."}
+     return
+  }
+
+  # Save current instance; Restore later
+  set oldCurInst [current_bd_instance .]
+
+  # Set parent object as current
+  current_bd_instance $parentObj
+
+
+  # Create interface ports
+
+  # Create ports
+  set RST [ create_bd_port -dir I -type rst RST ]
+  set_property -dict [ list \
+   CONFIG.POLARITY {ACTIVE_HIGH} \
+ ] $RST
+  set dataOut [ create_bd_port -dir O -from 7 -to 0 -type data dataOut ]
+  set dataReadyOut [ create_bd_port -dir O dataReadyOut ]
+  set dciData [ create_bd_port -dir I -from 7 -to 0 -type data dciData ]
+  set hSync [ create_bd_port -dir I hSync ]
+  set mainCLK [ create_bd_port -dir I -type clk -freq_hz 50000000 mainCLK ]
+  set pixCLK [ create_bd_port -dir I -type clk -freq_hz 10000000 pixCLK ]
+  set vSync [ create_bd_port -dir I vSync ]
+
+  # Create instance: dci_module_0, and set properties
+  set block_name dci_module
+  set block_cell_name dci_module_0
+  if { [catch {set dci_module_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $dci_module_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create instance: preprocessing_module_0, and set properties
+  set block_name preprocessing_module
+  set block_cell_name preprocessing_module_0
+  if { [catch {set preprocessing_module_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $preprocessing_module_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create port connections
+  connect_bd_net -net RST_1 [get_bd_ports RST] [get_bd_pins dci_module_0/RST]
+  connect_bd_net -net dciData_1 [get_bd_ports dciData] [get_bd_pins dci_module_0/dciData]
+  connect_bd_net -net dci_module_0_bOut [get_bd_pins dci_module_0/bOut] [get_bd_pins preprocessing_module_0/bIn]
+  connect_bd_net -net dci_module_0_dataReady [get_bd_pins dci_module_0/dataReady] [get_bd_pins preprocessing_module_0/dataReadyIn]
+  connect_bd_net -net dci_module_0_gOut [get_bd_pins dci_module_0/gOut] [get_bd_pins preprocessing_module_0/gIn]
+  connect_bd_net -net dci_module_0_rOut [get_bd_pins dci_module_0/rOut] [get_bd_pins preprocessing_module_0/rIn]
+  connect_bd_net -net hSync_1 [get_bd_ports hSync] [get_bd_pins dci_module_0/vSync]
+  connect_bd_net -net mainCLK_1 [get_bd_ports mainCLK] [get_bd_pins dci_module_0/mainCLK]
+  connect_bd_net -net pixCLK_1 [get_bd_ports pixCLK] [get_bd_pins dci_module_0/pixCLK] [get_bd_pins preprocessing_module_0/CLK]
+  connect_bd_net -net preprocessing_module_0_dataOut [get_bd_ports dataOut] [get_bd_pins preprocessing_module_0/dataOut]
+  connect_bd_net -net preprocessing_module_0_dataReadyOut [get_bd_ports dataReadyOut] [get_bd_pins preprocessing_module_0/dataReadyOut]
+  connect_bd_net -net vSync_1 [get_bd_ports vSync] [get_bd_pins dci_module_0/hSync]
+
+  # Create address segments
+
+
+  # Restore current instance
+  current_bd_instance $oldCurInst
+
+  save_bd_design
+common::send_gid_msg -ssname BD::TCL -id 2050 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
+
+  close_bd_design $design_name 
+}
+# End of cr_bd_dci_preprocessing()
+cr_bd_dci_preprocessing ""
+set_property REGISTERED_WITH_MANAGER "1" [get_files dci_preprocessing.bd ] 
+set_property SYNTH_CHECKPOINT_MODE "Hierarchical" [get_files dci_preprocessing.bd ] 
+
+
+# Create wrapper file for dci_preprocessing.bd
+make_wrapper -files [get_files dci_preprocessing.bd] -import -top
+
+if { [get_files preprocessing_module.vhd] == "" } {
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/preprocessing_module.vhd
+}
+if { [get_files dci_module.vhd] == "" } {
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/dci_module.vhd
 }
 if { [get_files BRAM_TDP_module.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/BRAM_TDP_module.vhd
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/BRAM_TDP_module.vhd
 }
 if { [get_files BRAM_ctrl_logic.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/BRAM_ctrl_logic.vhd
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/BRAM_ctrl_logic.vhd
 }
 if { [get_files ramPKG.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/ramPKG.vhd
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/ramPKG.vhd
 }
 if { [get_files filter_module.vhd] == "" } {
-  import_files -quiet -fileset sources_1 D:/XlinxWorkspace/Vivado/MGR/hdl/filter_module.vhd
+  import_files -quiet -fileset sources_1 C:/Users/kamzb/Desktop/Nowy-folder/MGR/hdl/filter_module.vhd
 }
 
 
@@ -484,10 +655,10 @@ proc cr_bd_filter_bd { parentCell } {
   # Perform GUI Layout
   regenerate_bd_layout -layout_string {
    "ActiveEmotionalView":"Default View",
-   "Default View_ScaleFactor":"1.25",
-   "Default View_TopLeft":"-165,-125",
+   "Default View_ScaleFactor":"1.49361",
+   "Default View_TopLeft":"27,-82",
    "ExpandedHierarchyInLayout":"",
-   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS
+   "guistr":"# # String gsaved with Nlview 7.0r6  2020-01-29 bk=1.5227 VDI=41 GEI=36 GUI=JA:10.0 non-TLS-threadsafe
 #  -string -flagsOSRD
 preplace port RST -pg 1 -lvl 0 -x -30 -y 30 -defaultsOSRD
 preplace port dbgFCtrl -pg 1 -lvl 4 -x 930 -y 70 -defaultsOSRD
@@ -497,8 +668,8 @@ preplace port pixCLK -pg 1 -lvl 0 -x -30 -y -30 -defaultsOSRD
 preplace port vSync -pg 1 -lvl 0 -x -30 -y 200 -defaultsOSRD
 preplace portBus FilterOut -pg 1 -lvl 4 -x 930 -y 210 -defaultsOSRD
 preplace portBus dciData -pg 1 -lvl 0 -x -30 -y 240 -defaultsOSRD
-preplace inst dci_module_0 -pg 1 -lvl 1 -x 150 -y 140 -defaultsOSRD -resize 212 288
 preplace inst preprocessing_module_0 -pg 1 -lvl 2 -x 470 -y 160 -defaultsOSRD -resize 221 258
+preplace inst dci_module_0 -pg 1 -lvl 1 -x 150 -y 140 -defaultsOSRD -resize 212 288
 preplace inst filter_module_0 -pg 1 -lvl 3 -x 770 -y 150 -defaultsOSRD -resize 224 228
 preplace netloc RST_1 1 0 3 0 -40 N -40 610
 preplace netloc dciData_1 1 0 1 NJ 240
@@ -556,6 +727,7 @@ if { $obj != "" } {
 
 }
 set obj [get_runs synth_1]
+set_property -name "auto_incremental_checkpoint.directory" -value "D:/XlinxWorkspace/Vivado/MGR/vivado_project/MGR.srcs/utils_1/imports/synth_1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 
 # set the current synth run
@@ -769,6 +941,7 @@ set_property -name "options.warn_on_violation" -value "1" -objects $obj
 
 }
 set obj [get_runs impl_1]
+set_property -name "auto_incremental_checkpoint.directory" -value "D:/XlinxWorkspace/Vivado/MGR/vivado_project/MGR.srcs/utils_1/imports/impl_1" -objects $obj
 set_property -name "strategy" -value "Vivado Implementation Defaults" -objects $obj
 set_property -name "steps.write_bitstream.args.readback_file" -value "0" -objects $obj
 set_property -name "steps.write_bitstream.args.verbose" -value "0" -objects $obj
